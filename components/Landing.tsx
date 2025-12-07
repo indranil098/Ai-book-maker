@@ -1,7 +1,7 @@
 
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, PenTool, Book, Share2, Heart } from 'lucide-react';
+import { ArrowRight, Sparkles, PenTool, Book, Share2 } from 'lucide-react';
 
 interface LandingProps {
   onStart: () => void;
@@ -125,53 +125,31 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
         </div>
       </div>
 
-      {/* Modern Footer */}
-      <footer className="w-full relative mt-auto border-t border-stone-200 dark:border-stone-800 bg-white/60 dark:bg-stone-950/60 backdrop-blur-xl">
-        <div className="max-w-[1920px] mx-auto px-6 py-16 md:py-24">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 items-start">
-            
-            {/* Brand Section */}
-            <div className="lg:col-span-5 space-y-6">
-              <div className="flex flex-col">
-                <h2 className="font-serif text-5xl md:text-6xl font-bold text-stone-900 dark:text-stone-50 tracking-tighter mb-2">
-                  Lumina AI
-                </h2>
-              </div>
-              <p className="text-stone-600 dark:text-stone-400 max-w-sm leading-relaxed">
-                Empowering the next generation of storytellers with artificial intelligence. 
-                Write, publish, and inspire without boundaries.
-              </p>
-            </div>
+      {/* NEW Modern Typographic Footer */}
+      <motion.footer 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full relative mt-auto border-t border-stone-200/50 dark:border-stone-800/50 bg-white/60 dark:bg-stone-950/60 backdrop-blur-xl overflow-hidden"
+      >
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-px bg-gradient-to-r from-transparent via-saffron-500 to-transparent" />
+        <div className="max-w-7xl mx-auto px-6 py-24 md:py-32 text-center">
+          
+          <h2 className="font-serif font-bold text-7xl md:text-9xl lg:text-[160px] leading-none tracking-tighter bg-gradient-to-r from-stone-800 to-stone-500 dark:from-white dark:to-stone-400 bg-clip-text text-transparent">
+            Lumina AI
+          </h2>
 
-            {/* Quote Section */}
-            <div className="lg:col-span-4 lg:col-start-7 bg-stone-100 dark:bg-stone-900/50 p-8 rounded-3xl border border-stone-200 dark:border-stone-800">
-               <Sparkles className="text-saffron-500 mb-4" size={24} />
-               <blockquote className="font-serif text-2xl md:text-3xl italic text-stone-800 dark:text-stone-200 leading-tight mb-6">
-                 "There is no greater agony than bearing an untold story inside you."
-               </blockquote>
-               <cite className="not-italic font-bold text-sm tracking-widest uppercase text-stone-500 dark:text-stone-500">
-                 — Maya Angelou
-               </cite>
-            </div>
+          <p className="mt-8 text-lg md:text-xl text-stone-500 dark:text-stone-400 font-medium tracking-tight">
+            Your Story, Instantly Forged.
+          </p>
 
-            {/* Links Section */}
-            <div className="lg:col-span-2 flex flex-col gap-4 text-stone-600 dark:text-stone-400 font-medium text-sm">
-               <span className="text-stone-900 dark:text-stone-100 font-bold mb-2">Platform</span>
-               <a href="#" className="hover:text-saffron-500 transition-colors">About Us</a>
-               <a href="#" className="hover:text-saffron-500 transition-colors">Features</a>
-               <a href="#" className="hover:text-saffron-500 transition-colors">Pricing</a>
-               <a href="#" className="hover:text-saffron-500 transition-colors">API Access</a>
-            </div>
+          <div className="mt-24 text-xs text-stone-400 dark:text-stone-500 font-medium uppercase tracking-wider">
+            <span>© {new Date().getFullYear()} Lumina Studio</span>
           </div>
 
-          <div className="mt-20 pt-8 border-t border-stone-200 dark:border-stone-800 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-stone-400 font-medium uppercase tracking-wider">
-             <span>© {new Date().getFullYear()} Lumina Studio. All rights reserved.</span>
-             <div className="flex items-center gap-1">
-               Made with <Heart size={12} className="text-red-500 fill-red-500" /> by Lumina Studio
-             </div>
-          </div>
         </div>
-      </footer>
+      </motion.footer>
     </div>
   );
 };

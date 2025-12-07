@@ -8,7 +8,7 @@ class MarkdownService {
     marked.setOptions({
       breaks: true, // Render <br> for single line breaks
       gfm: true, // Use GitHub Flavored Markdown
-      async: false, // Use synchronous parsing
+      async: false, // Use synchronous parsing,
     });
   }
 

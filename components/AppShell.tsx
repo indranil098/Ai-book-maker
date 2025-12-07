@@ -50,7 +50,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
               />
             </motion.div>
             <div className="flex flex-col -space-y-1">
-              <span className="font-serif font-bold text-2xl tracking-tight text-stone-900 dark:text-white group-hover:text-saffron-600 dark:group-hover:text-saffron-400 transition-colors duration-300 drop-shadow-sm">
+              <span className="font-serif font-bold text-2xl tracking-tight bg-gradient-to-r from-stone-900 to-stone-600 dark:from-white dark:to-stone-400 bg-clip-text text-transparent transition-colors duration-300 drop-shadow-sm">
                 Lumina
               </span>
             </div>
