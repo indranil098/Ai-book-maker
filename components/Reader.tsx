@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Book as BookType, ChatMessage, Character } from '../types';
 import { geminiService } from '../services/geminiService';
 import { markdownService } from '../services/markdownService';
@@ -34,7 +34,20 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
       if (available.length === 0) return;
       setVoices(available);
       
-      const rankedVoices = ['Google US English', 'Microsoft Zira Online', 'Samantha', 'Alex'];
+      const rankedVoices = [
+        // Premium Natural Voices
+        'Microsoft Zira - English (United States)',
+        'Microsoft David - English (United States)',
+        'Google US English', 
+        'Google UK English Female',
+        'Google UK English Male',
+        'Samantha', // Apple
+        'Alex',     // Apple
+        'Daniel',   // Apple UK
+        // Standard High Quality
+        'Microsoft Zira Online (Natural) - English (United States)',
+        'Microsoft Guy Online (Natural) - English (United States)',
+      ];
       let bestVoice: SpeechSynthesisVoice | null = null;
       for (const name of rankedVoices) {
           const found = available.find(v => v.name === name && v.lang.startsWith('en'));
@@ -71,12 +84,17 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
         synthesisRef.current.resume();
       } else {
         synthesisRef.current.cancel();
-        // Strip Markdown for cleaner speech
-        const textToRead = (activeChapter.content || activeChapter.summary).replace(/(\*|_|#|`|~|>)/g, '');
+        
+        // Use markdownService to get clean text for speech
+        const html = markdownService.parse(activeChapter.content || activeChapter.summary);
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const textToRead = tempDiv.textContent || tempDiv.innerText || '';
+
         const utterance = new SpeechSynthesisUtterance(textToRead);
         if (selectedVoice) utterance.voice = selectedVoice;
-        utterance.rate = 1;
-        utterance.pitch = 1;
+        utterance.rate = 0.95; // Slightly slower for audiobook pace
+        utterance.pitch = 1.0; // Natural pitch
         utterance.onend = () => setIsPlaying(false);
         utterance.onerror = (e) => { console.error("TTS Error:", e); setIsPlaying(false); };
         synthesisRef.current.speak(utterance);
@@ -100,16 +118,63 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
       setIsThinking(false);
     }
   };
+  
+  const processedContent = useMemo(() => {
+    if (!activeChapter.content) return '';
+    let html = markdownService.parse(activeChapter.content);
+    
+    // Sort characters by name length, longest first, to avoid partial matches (e.g., matching "Ed" inside "Edward")
+    const sortedCharacters = [...book.characters].sort((a, b) => b.name.length - a.name.length);
+
+    sortedCharacters.forEach(character => {
+      // This regex finds the character name as a whole word, not as part of another word.
+      // It uses a negative lookbehind and lookahead to ensure it's not part of a larger alphanumeric sequence.
+      const regex = new RegExp(`(?<!\\w)(${character.name})(?!\\w)`, 'gi');
+      html = html.replace(regex, (match) => 
+        `<span class="character-highlight" data-character-name="${character.name}">${match}</span>`
+      );
+    });
+
+    return html;
+  }, [activeChapter.content, book.characters]);
+
+  const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('character-highlight')) {
+      const charName = target.getAttribute('data-character-name');
+      const character = book.characters.find(c => c.name === charName);
+      if (character) {
+        setSelectedCharacter(character);
+      }
+    }
+  };
+
 
   if (!activeChapter) {
      return <div className="p-12 text-center text-stone-500 dark:text-stone-400">The library is empty. Create a book first.</div>;
   }
 
-  const sanitizedHtmlContent = markdownService.parse(activeChapter.content);
-
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] bg-white/50 dark:bg-stone-950/50 backdrop-blur-xl relative overflow-hidden transition-colors duration-300">
-      
+      <style>{`
+        .character-highlight {
+          color: #D97706; /* saffron-600 */
+          text-decoration: underline;
+          text-decoration-style: dotted;
+          text-decoration-color: rgba(217, 119, 6, 0.5);
+          cursor: pointer;
+          transition: all 0.2s ease-in-out;
+        }
+        .dark .character-highlight {
+          color: #FBBF24; /* saffron-400 */
+          text-decoration-color: rgba(251, 191, 36, 0.5);
+        }
+        .character-highlight:hover {
+          background-color: rgba(251, 191, 36, 0.15);
+          text-decoration: none;
+        }
+      `}</style>
+
       <div className="w-full h-1 bg-stone-200 dark:bg-stone-800 shrink-0">
          <motion.div 
            className="h-full bg-saffron-500"
@@ -158,8 +223,9 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
               <div className="flex-1 px-6 md:px-16 py-6">
                 {activeChapter.content ? (
                   <div
+                    onClick={handleContentClick}
                     className="prose prose-lg prose-stone dark:prose-invert max-w-none font-serif leading-loose text-stone-800 dark:text-stone-300"
-                    dangerouslySetInnerHTML={{ __html: sanitizedHtmlContent }}
+                    dangerouslySetInnerHTML={{ __html: processedContent }}
                   />
                 ) : (
                   <div className="text-stone-400 italic text-center py-12">(Content not generated yet. Go to Editor.)</div>

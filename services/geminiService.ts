@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Chapter, Book } from "../types";
 
@@ -11,16 +12,14 @@ const cleanJson = (text: string): string => {
 
 class GeminiService {
   
+  // Fix: Per coding guidelines, the API key must be obtained exclusively from `process.env.API_KEY`.
+  // This resolves the error related to `import.meta.env`.
   private getClient(): GoogleGenAI {
-    // FIX: Check for VITE_GEMINI_API_KEY first.
-    // We check both process.env (Server/Vercel) and import.meta.env (Client/Vite)
-    const apiKey = process.env.VITE_GEMINI_API_KEY || 
-                   process.env.API_KEY || 
-                   (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : undefined);
+    const apiKey = process.env.API_KEY;
 
     if (!apiKey) {
-      console.error("API Key is not configured. Checked: VITE_GEMINI_API_KEY and API_KEY.");
-      throw new Error("AUTH_ERROR: API Key is missing. Please check your .env file or Vercel settings.");
+      console.error("API Key is not configured. It must be provided via `process.env.API_KEY`.");
+      throw new Error("AUTH_ERROR: API Key is missing. Please ensure the `API_KEY` environment variable is set.");
     }
     return new GoogleGenAI({ apiKey });
   }
