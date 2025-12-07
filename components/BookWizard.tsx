@@ -146,12 +146,12 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
       setStatus('error');
       
       const msg = e.message || e.toString();
-      if (msg.includes("API_KEY_MISSING") || msg.includes("AUTH_ERROR")) {
-        setErrorDetails("Missing or invalid API Key. Please check your settings.");
+      if (msg.includes("API Key is not configured") || msg.includes("AUTH_ERROR")) {
+        setErrorDetails("The application's API Key is missing or invalid. Please contact the administrator to resolve this issue.");
       } else if (msg.includes("QUOTA") || msg.includes("429")) {
-        setErrorDetails("Google API Quota exceeded. Please try again later or use a different key.");
+        setErrorDetails("The application's API quota has been exceeded. Please try again later.");
       } else {
-        setErrorDetails("Failed to generate book. Please check your internet connection.");
+        setErrorDetails("An unexpected error occurred during generation. Please check your internet connection and try again.");
       }
     }
   };

@@ -1,9 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Chapter, Book } from "../types";
-import { getApiKey } from "../config";
 
 // HELPER: Cleans AI output to ensure JSON.parse doesn't fail
-// (AI sometimes wraps JSON in ```json ... ``` blocks)
 const cleanJson = (text: string): string => {
   if (!text) return "{}";
   // Remove markdown code blocks if present
@@ -14,15 +12,15 @@ const cleanJson = (text: string): string => {
 class GeminiService {
   
   private getClient(): GoogleGenAI {
-    // FIX: Updated to check for VITE_GEMINI_API_KEY in both process and import.meta
-    const apiKey = getApiKey() || 
-                   process.env.VITE_GEMINI_API_KEY || 
-                   process.env.API_KEY ||
-                   (typeof import.meta !== 'undefined' && (import.meta as any).env ? (import.meta as any).env.VITE_GEMINI_API_KEY : undefined);
+    // FIX: Check for VITE_GEMINI_API_KEY first.
+    // We check both process.env (Server/Vercel) and import.meta.env (Client/Vite)
+    const apiKey = process.env.VITE_GEMINI_API_KEY || 
+                   process.env.API_KEY || 
+                   (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : undefined);
 
     if (!apiKey) {
-      console.error("API Key missing. Checked: getApiKey(), process.env.VITE_GEMINI_API_KEY, import.meta.env.VITE_GEMINI_API_KEY");
-      throw new Error("Configuration Error: API Key is missing.");
+      console.error("API Key is not configured. Checked: VITE_GEMINI_API_KEY and API_KEY.");
+      throw new Error("AUTH_ERROR: API Key is missing. Please check your .env file or Vercel settings.");
     }
     return new GoogleGenAI({ apiKey });
   }
@@ -37,16 +35,14 @@ class GeminiService {
         lastError = error;
         console.warn(`Attempt ${i + 1} failed:`, error);
         
-        // Check for fatal errors that shouldn't be retried
         const msg = error.toString().toLowerCase();
-        if (msg.includes("api_key") || msg.includes("auth") || msg.includes("permission")) {
-          throw new Error("AUTH_ERROR: Please check your API Key configuration.");
+        if (msg.includes("api_key") || msg.includes("auth")) {
+          throw new Error("AUTH_ERROR: API Key is invalid or not configured correctly.");
         }
         if (msg.includes("quota") || msg.includes("429")) {
           throw new Error("QUOTA_EXCEEDED");
         }
 
-        // Wait before retry
         if (i < retries - 1) {
           await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
         }
@@ -55,9 +51,6 @@ class GeminiService {
     throw lastError;
   }
 
-  /**
-   * Private helper to get the "Master Author" system prompt based on genre/tone
-   */
   private getMasterAuthorPrompt(genre: string, tone: string): string {
       return `
         You are an elite, award-winning, hyper-versatile master author.
@@ -79,9 +72,6 @@ class GeminiService {
       `;
   }
 
-  /**
-   * Generates the book structure (Title, Chapters, Summaries, Characters)
-   */
   async generateBookStructure(title: string, genre: string, tone: string, audience: string, additionalPrompt: string): Promise<Partial<Book>> {
     return this.withRetry(async () => {
       const ai = this.getClient();
@@ -144,19 +134,18 @@ class GeminiService {
       const text = response.text;
       if (!text) throw new Error("No content generated");
 
-      // FIX: Use cleanJson to prevent parsing errors
+      // FIX: Ensure cleanJson is used here
       const data = JSON.parse(cleanJson(text));
       
       if (!data.chapters || !Array.isArray(data.chapters)) {
         throw new Error("Invalid book structure generated");
       }
       
-      // Map to our internal structure
       const chapters: Chapter[] = data.chapters.map((c: any, index: number) => ({
         id: `ch-${index}-${Date.now()}`,
         title: c.title,
         summary: c.summary,
-        content: "", // Empty initially
+        content: "",
         isGenerated: false,
       }));
 
@@ -169,9 +158,6 @@ class GeminiService {
     });
   }
 
-  /**
-   * Generates a hyper-specific, visually striking book cover.
-   */
   async generateBookCover(title: string, genre: string, tone: string): Promise<string | undefined> {
     try {
       return await this.withRetry(async () => {
@@ -231,9 +217,6 @@ class GeminiService {
     }
   }
   
-  /**
-   * Generates a world map for a book.
-   */
   async generateWorldMap(book: Book): Promise<string | undefined> {
     try {
       return await this.withRetry(async () => {
@@ -271,10 +254,6 @@ class GeminiService {
     }
   }
 
-
-  /**
-   * Generates a cinematic illustration for a specific scene.
-   */
   async generateIllustration(sceneDescription: string, genre: string): Promise<string | undefined> {
     try {
       return await this.withRetry(async () => {
@@ -317,9 +296,6 @@ class GeminiService {
     }
   }
 
-  /**
-   * Generates the content for a specific chapter based on its summary and previous context.
-   */
   async generateChapterContent(bookTitle: string, chapter: Chapter, previousChapterSummary?: string): Promise<string> {
     try {
       return await this.withRetry(async () => {
@@ -361,9 +337,6 @@ class GeminiService {
     }
   }
 
-  /**
-   * Rewrites a specific section of text based on an instruction
-   */
   async rewriteText(selectedText: string, instruction: string, bookContext: string): Promise<string> {
     try {
       return await this.withRetry(async () => {
@@ -393,9 +366,6 @@ class GeminiService {
     }
   }
 
-  /**
-   * Asks a question to the "Book" (Contextual RAG-lite)
-   */
   async askBook(question: string, currentChapterContent: string, bookSummary: string): Promise<string> {
     try {
       return await this.withRetry(async () => {
@@ -420,23 +390,6 @@ class GeminiService {
       });
     } catch (error) {
       return "I couldn't connect to the spirit world (API Error).";
-    }
-  }
-
-  /**
-   * Simple connection test for Settings validation
-   */
-  async testConnection(): Promise<boolean> {
-    try {
-       const ai = this.getClient();
-       await ai.models.generateContent({
-         model: "gemini-2.5-flash",
-         contents: "Test",
-       });
-       return true;
-    } catch(e) {
-       console.error("Test connection failed:", e);
-       return false;
     }
   }
 }
