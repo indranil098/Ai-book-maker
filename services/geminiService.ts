@@ -85,7 +85,7 @@ class GeminiService {
         
         Generate a JSON response with:
         1. The book title (feel free to improve it).
-        2. A creative author name.
+        2. A creative author pseudonym (pen name). It MUST NOT be a common human name. Examples: 'A. J. Fable', 'The Story Weaver', 'Lexicon Drift'.
         3. A list of 8-12 chapters. Each chapter must have a title and a compelling plot summary (2-3 sentences).
         4. A list of 3-5 main characters. Each character must have a name, role (e.g., Protagonist, Antagonist), and a brief description.
       `;
@@ -100,7 +100,7 @@ class GeminiService {
             type: Type.OBJECT,
             properties: {
               title: { type: Type.STRING },
-              author: { type: Type.STRING },
+              author: { type: Type.STRING, description: "A creative and unique author pseudonym (pen name), not a common human name." },
               chapters: {
                 type: Type.ARRAY,
                 items: {
@@ -216,85 +216,6 @@ class GeminiService {
     }
   }
   
-  async generateWorldMap(book: Book): Promise<string | undefined> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        const model = "gemini-2.5-flash-image";
-        const settingSummary = book.chapters.map(c => c.summary).join(' ').substring(0, 1000);
-
-        const prompt = `
-          Create a detailed world map for a ${book.genre} book titled "${book.title}".
-          The world is described as having a ${book.tone} tone. 
-          Key elements from the story include: ${settingSummary}.
-          
-          STYLE: Generate a beautiful, hand-drawn map in a vintage parchment or epic fantasy style. 
-          Include geographical features like mountains, forests, rivers, and cities that fit the genre.
-          Do NOT include any text or labels on the map. The map should be purely visual.
-          ASPECT RATIO: 16:9, landscape.
-        `;
-        
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: { parts: [{ text: prompt }] },
-          config: { imageConfig: { aspectRatio: "16:9" } }
-        });
-
-        for (const part of response.candidates?.[0]?.content?.parts || []) {
-           if (part.inlineData && part.inlineData.mimeType.startsWith('image')) {
-              return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-           }
-        }
-        return undefined;
-      });
-    } catch (error) {
-      console.error("World map generation failed:", error);
-      return undefined;
-    }
-  }
-
-  async generateIllustration(sceneDescription: string, genre: string): Promise<string | undefined> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        const model = "gemini-2.5-flash-image";
-        
-        const prompt = `
-          Create a stunning, high-contrast cinematic illustration for a ${genre} story.
-          Scene Description: ${sceneDescription}
-          
-          STYLE: Cinematic, highly detailed, dramatic lighting, 8k resolution. 
-          Use rich, deep colors and strong contrast. Make it look like a movie still or concept art.
-          No text on the image.
-        `;
-
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: {
-            parts: [{ text: prompt }]
-          },
-          config: {
-            imageConfig: {
-              aspectRatio: "16:9"
-            }
-          }
-        });
-
-        if (response.candidates?.[0]?.content?.parts) {
-          for (const part of response.candidates[0].content.parts) {
-             if (part.inlineData && part.inlineData.mimeType.startsWith('image')) {
-                return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-             }
-          }
-        }
-        return undefined;
-      });
-    } catch (error) {
-       console.error("Illustration failed:", error);
-       return undefined;
-    }
-  }
-
   async generateChapterContent(bookTitle: string, chapter: Chapter, previousChapterSummary?: string): Promise<string> {
     try {
       return await this.withRetry(async () => {

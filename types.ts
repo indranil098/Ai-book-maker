@@ -29,7 +29,6 @@ export interface Chapter {
   summary: string;
   content: string;
   isGenerated: boolean;
-  illustrationUrl?: string; // URL for the chapter-specific illustration
 }
 
 export interface Book {
@@ -42,7 +41,6 @@ export interface Book {
   coverImage?: string; // URL
   chapters: Chapter[];
   characters: Character[];
-  worldMapUrl?: string; // URL for the new World Map feature
   createdAt: Date;
 }
 
