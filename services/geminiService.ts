@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, SchemaType } from "@google/genai";
 import { Chapter, Book } from "../types";
 
 // HELPER: Cleans AI output to ensure JSON.parse doesn't fail
@@ -11,14 +11,19 @@ const cleanJson = (text: string): string => {
 
 class GeminiService {
   
-  // FIX: Per coding guidelines, API key is sourced exclusively from `process.env.API_KEY`.
-  // This also resolves the TypeScript error for `import.meta.env`.
+  // FIX: Updated to match your Vercel Environment Variable (VITE_GEMINI_API_KEY)
   private getClient(): GoogleGenAI {
-    const apiKey = process.env.API_KEY;
+    // 1. Check process.env.VITE_GEMINI_API_KEY (Vercel Server / Node)
+    // 2. Check process.env.API_KEY (Standard Backup)
+    // 3. Check import.meta.env.VITE_GEMINI_API_KEY (Vite Client Fallback)
+    const apiKey = process.env.VITE_GEMINI_API_KEY || 
+                   process.env.API_KEY || 
+                   (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : undefined);
 
     if (!apiKey) {
-      console.error("API Key is not configured. It must be available in process.env.API_KEY.");
-      throw new Error("AUTH_ERROR: API Key is missing.");
+      console.error("Configuration Error: API Key is missing.");
+      console.error("Checked: VITE_GEMINI_API_KEY and API_KEY.");
+      throw new Error("AUTH_ERROR: API Key is missing. Please check your Vercel Environment Variables.");
     }
     return new GoogleGenAI({ apiKey });
   }
@@ -96,29 +101,29 @@ class GeminiService {
           systemInstruction: systemInstruction,
           responseMimeType: "application/json",
           responseSchema: {
-            type: Type.OBJECT,
+            type: SchemaType.OBJECT, // FIX: Use SchemaType instead of Type
             properties: {
-              title: { type: Type.STRING },
-              author: { type: Type.STRING },
+              title: { type: SchemaType.STRING },
+              author: { type: SchemaType.STRING },
               chapters: {
-                type: Type.ARRAY,
+                type: SchemaType.ARRAY,
                 items: {
-                  type: Type.OBJECT,
+                  type: SchemaType.OBJECT,
                   properties: {
-                    title: { type: Type.STRING },
-                    summary: { type: Type.STRING },
+                    title: { type: SchemaType.STRING },
+                    summary: { type: SchemaType.STRING },
                   },
                   required: ["title", "summary"],
                 },
               },
               characters: {
-                type: Type.ARRAY,
+                type: SchemaType.ARRAY,
                 items: {
-                  type: Type.OBJECT,
+                  type: SchemaType.OBJECT,
                   properties: {
-                    name: { type: Type.STRING },
-                    role: { type: Type.STRING },
-                    description: { type: Type.STRING },
+                    name: { type: SchemaType.STRING },
+                    role: { type: SchemaType.STRING },
+                    description: { type: SchemaType.STRING },
                   },
                   required: ["name", "role", "description"],
                 },
@@ -129,10 +134,11 @@ class GeminiService {
         },
       });
 
-      const text = response.text;
+      // FIX: response.text is a function in the new SDK
+      const text = response.text ? response.text() : "{}";
+      
       if (!text) throw new Error("No content generated");
 
-      // FIX: Ensure cleanJson is used here
       const data = JSON.parse(cleanJson(text));
       
       if (!data.chapters || !Array.isArray(data.chapters)) {
@@ -180,216 +186,4 @@ class GeminiService {
            typographyStyle = "Ornate, hand-lettered gold calligraphy with a subtle glow. Title '${title}' MUST be woven into the artwork's composition.";
         }
         else if (g.includes('thriller') || g.includes('mystery')) {
-          artDirection = "Psychological Thriller cover, minimalist and stark. High Contrast. Stark Black and White with a single splash of Intense Red. Double exposure photography, a face blending with a cityscape, silhouettes in fog. Cinematic suspense.";
-          typographyStyle = "Bold, distressed, condensed sans-serif font. Title '${title}' MUST be huge and imposing, creating tension.";
-        }
-        else if (g.includes('horror')) {
-          artDirection = "Cosmic Horror in the style of Zdzisław Beksiński. High Contrast. Deep Vantablack shadows vs sickly neon green or blood orange. Surreal, unsettling, non-euclidean geometry, scratchy textures.";
-          typographyStyle = "Jagged, hand-scratched font. Title '${title}' MUST look terrifying and unstable.";
-        }
-        
-        const prompt = `
-          Design a professional, publishable, best-selling book cover for: "${title}".
-          Genre: ${genre}. Tone: ${tone}.
-          VISUAL STYLE: ${artDirection}
-          TYPOGRAPHY: The title "${title}" MUST be written prominently on the cover. Use this style: ${typographyStyle}
-          COMPOSITION: Vertical aspect ratio (3:4). Clean, professional layout.
-        `;
-
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: { parts: [{ text: prompt }] },
-          config: { imageConfig: { aspectRatio: "3:4" } }
-        });
-
-        for (const part of response.candidates?.[0]?.content?.parts || []) {
-           if (part.inlineData && part.inlineData.mimeType.startsWith('image')) {
-              return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-           }
-        }
-        return undefined;
-      });
-    } catch (error) {
-      console.error("Cover generation failed:", error);
-      return undefined;
-    }
-  }
-  
-  async generateWorldMap(book: Book): Promise<string | undefined> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        const model = "gemini-2.5-flash-image";
-        const settingSummary = book.chapters.map(c => c.summary).join(' ').substring(0, 1000);
-
-        const prompt = `
-          Create a detailed world map for a ${book.genre} book titled "${book.title}".
-          The world is described as having a ${book.tone} tone. 
-          Key elements from the story include: ${settingSummary}.
-          
-          STYLE: Generate a beautiful, hand-drawn map in a vintage parchment or epic fantasy style. 
-          Include geographical features like mountains, forests, rivers, and cities that fit the genre.
-          Do NOT include any text or labels on the map. The map should be purely visual.
-          ASPECT RATIO: 16:9, landscape.
-        `;
-        
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: { parts: [{ text: prompt }] },
-          config: { imageConfig: { aspectRatio: "16:9" } }
-        });
-
-        for (const part of response.candidates?.[0]?.content?.parts || []) {
-           if (part.inlineData && part.inlineData.mimeType.startsWith('image')) {
-              return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-           }
-        }
-        return undefined;
-      });
-    } catch (error) {
-      console.error("World map generation failed:", error);
-      return undefined;
-    }
-  }
-
-  async generateIllustration(sceneDescription: string, genre: string): Promise<string | undefined> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        const model = "gemini-2.5-flash-image";
-        
-        const prompt = `
-          Create a stunning, high-contrast cinematic illustration for a ${genre} story.
-          Scene Description: ${sceneDescription}
-          
-          STYLE: Cinematic, highly detailed, dramatic lighting, 8k resolution. 
-          Use rich, deep colors and strong contrast. Make it look like a movie still or concept art.
-          No text on the image.
-        `;
-
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: {
-            parts: [{ text: prompt }]
-          },
-          config: {
-            imageConfig: {
-              aspectRatio: "16:9"
-            }
-          }
-        });
-
-        if (response.candidates?.[0]?.content?.parts) {
-          for (const part of response.candidates[0].content.parts) {
-             if (part.inlineData && part.inlineData.mimeType.startsWith('image')) {
-                return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-             }
-          }
-        }
-        return undefined;
-      });
-    } catch (error) {
-       console.error("Illustration failed:", error);
-       return undefined;
-    }
-  }
-
-  async generateChapterContent(bookTitle: string, chapter: Chapter, previousChapterSummary?: string): Promise<string> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        const model = "gemini-2.5-flash"; 
-        
-        const prompt = `
-          You are writing the book "${bookTitle}".
-          Write the full content for the chapter: "${chapter.title}".
-          
-          Chapter Summary: ${chapter.summary}
-          ${previousChapterSummary ? `Previous context: ${previousChapterSummary}` : ''}
-          
-          INSTRUCTIONS:
-          - Write approx 800-1200 words.
-          - Use immersive, sensory details.
-          - Maintain cinematic pacing.
-          - Focus on "Show, don't tell".
-          - Format with Markdown (bold, italics).
-          - Do NOT include the chapter title at the start. Start directly with the story.
-        `;
-
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: prompt,
-        });
-
-        const text = response.text;
-        
-        if (text && text.trim().length > 300) {
-            return text;
-        } else {
-            throw new Error("Content generated was too short or empty.");
-        }
-      });
-    } catch (error) {
-       console.error("Chapter generation failed:", error);
-       throw error;
-    }
-  }
-
-  async rewriteText(selectedText: string, instruction: string, bookContext: string): Promise<string> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        const model = "gemini-2.5-flash";
-        const prompt = `
-          You are an expert editor. 
-          Rewrite the following text selection according to this instruction: "${instruction}".
-          
-          Context of the book: ${bookContext}
-          
-          Original Text: "${selectedText}"
-          
-          Return ONLY the rewritten text. Do not add quotes or conversational filler.
-        `;
-
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: prompt,
-        });
-
-        return response.text || selectedText;
-      });
-    } catch (error) {
-      console.error("Rewrite failed:", error);
-      throw error;
-    }
-  }
-
-  async askBook(question: string, currentChapterContent: string, bookSummary: string): Promise<string> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        const model = "gemini-2.5-flash";
-        const prompt = `
-          You are the spirit of this book. Answer the reader's question based ONLY on the provided context.
-          If the answer isn't in the text, answer in the persona of the book's narrator speculating plausibly.
-          
-          Book Context: ${bookSummary}
-          Current Chapter Text: ${currentChapterContent.substring(0, 5000)}... (truncated)
-          
-          Reader Question: ${question}
-        `;
-
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: prompt,
-        });
-
-        return response.text || "I am lost for words...";
-      });
-    } catch (error) {
-      return "I couldn't connect to the spirit world (API Error).";
-    }
-  }
-}
-
-export const geminiService = new GeminiService();
+          artDirection = "Psychological Thr
