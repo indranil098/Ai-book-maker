@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Lock, User as UserIcon, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
@@ -67,7 +68,7 @@ export const Auth: React.FC<AuthProps> = ({ view, onAuthSuccess, onSwitchView })
         <div className="p-8 md:p-10">
           <div className="text-center mb-8">
             <h2 className="font-serif text-3xl font-bold text-stone-900 mb-2">
-              {isLogin ? 'Welcome Back' : 'Join Lumina'}
+              {isLogin ? 'Welcome Back' : 'Join Novelia'}
             </h2>
             <p className="text-stone-500">
               {isLogin 

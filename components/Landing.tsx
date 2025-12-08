@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles, PenTool, Book, Share2 } from 'lucide-react';
@@ -95,7 +96,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
             className="text-lg md:text-xl text-stone-600 dark:text-stone-300 max-w-2xl mx-auto mb-12 font-body leading-relaxed"
           >
             From a single idea to a complete, published book. 
-            Lumina uses advanced AI to help you write, edit, and share your stories with the world.
+            Novelia uses advanced AI to help you write, edit, and share your stories with the world.
           </motion.p>
 
           <motion.div
@@ -137,7 +138,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
         <div className="max-w-7xl mx-auto px-6 py-24 md:py-32 text-center">
           
           <h2 className="font-serif font-bold text-7xl md:text-9xl lg:text-[160px] leading-none tracking-tighter bg-gradient-to-r from-stone-800 to-stone-500 dark:from-white dark:to-stone-400 bg-clip-text text-transparent">
-            Lumina AI
+            Novelia AI
           </h2>
 
           <p className="mt-8 text-lg md:text-xl text-stone-500 dark:text-stone-400 font-medium tracking-tight">
@@ -145,7 +146,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
           </p>
 
           <div className="mt-24 text-xs text-stone-400 dark:text-stone-500 font-medium uppercase tracking-wider">
-            <span>© {new Date().getFullYear()} Lumina Studio</span>
+            <span>© {new Date().getFullYear()} Novelia Studio</span>
           </div>
 
         </div>

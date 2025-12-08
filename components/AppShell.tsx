@@ -1,5 +1,6 @@
 
 
+
 import React, { useState } from 'react';
 import { BookOpen, Moon, Sun, Menu, X, Edit3, Library } from 'lucide-react';
 import { ViewState } from '../types';
@@ -45,13 +46,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
             >
               <img 
                 src="https://github.com/indranil122/image/blob/main/ChatGPT%20Image%20Dec%204,%202025,%2012_50_02%20AM-Photoroom.png?raw=true" 
-                alt="Lumina Logo" 
+                alt="Novelia Logo" 
                 className="w-full h-full object-contain" 
               />
             </motion.div>
             <div className="flex flex-col -space-y-1">
               <span className="font-serif font-bold text-2xl tracking-tight bg-gradient-to-r from-stone-900 to-stone-600 dark:from-white dark:to-stone-400 bg-clip-text text-transparent transition-colors duration-300 drop-shadow-sm">
-                Lumina
+                Novelia
               </span>
             </div>
           </div>

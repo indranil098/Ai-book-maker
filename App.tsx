@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { AppShell } from './components/AppShell';
 import { Landing } from './components/Landing';
@@ -19,7 +20,7 @@ const App: React.FC = () => {
   // Dark Mode State
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('lumina-theme');
+      const saved = localStorage.getItem('novelia-theme');
       if (saved) return saved === 'dark';
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
@@ -29,7 +30,7 @@ const App: React.FC = () => {
   // Load books from localStorage on initial render
   useEffect(() => {
     try {
-      const savedBooks = localStorage.getItem('lumina-books');
+      const savedBooks = localStorage.getItem('novelia-books');
       if (savedBooks) {
         // Parse and revive dates
         const parsedBooks = JSON.parse(savedBooks).map((book: any) => ({
@@ -47,7 +48,7 @@ const App: React.FC = () => {
   // Save books to localStorage whenever they change
   useEffect(() => {
     try {
-      localStorage.setItem('lumina-books', JSON.stringify(books));
+      localStorage.setItem('novelia-books', JSON.stringify(books));
     } catch (error) {
       console.error("Failed to save books to localStorage", error);
     }
@@ -56,10 +57,10 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('lumina-theme', 'dark');
+      localStorage.setItem('novelia-theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('lumina-theme', 'light');
+      localStorage.setItem('novelia-theme', 'light');
     }
   }, [isDarkMode]);
 
