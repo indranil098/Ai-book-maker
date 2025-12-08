@@ -186,4 +186,219 @@ class GeminiService {
            typographyStyle = "Ornate, hand-lettered gold calligraphy with a subtle glow. Title '${title}' MUST be woven into the artwork's composition.";
         }
         else if (g.includes('thriller') || g.includes('mystery')) {
-          artDirection = "Psychological Thr
+          artDirection = "Psychological Thriller cover, minimalist and stark. High Contrast. Stark Black and White with a single splash of Intense Red. Double exposure photography, a face blending with a cityscape, silhouettes in fog. Cinematic suspense.";
+          typographyStyle = "Bold, distressed, condensed sans-serif font. Title '${title}' MUST be huge and imposing, creating tension.";
+        }
+        else if (g.includes('horror')) {
+          artDirection = "Cosmic Horror in the style of Zdzisław Beksiński. High Contrast. Deep Vantablack shadows vs sickly neon green or blood orange. Surreal, unsettling, non-euclidean geometry, scratchy textures.";
+          typographyStyle = "Jagged, hand-scratched font. Title '${title}' MUST look terrifying and unstable.";
+        }
+        
+        const prompt = `
+          Design a professional, publishable, best-selling book cover for: "${title}".
+          Genre: ${genre}. Tone: ${tone}.
+          VISUAL STYLE: ${artDirection}
+          TYPOGRAPHY: The title "${title}" MUST be written prominently on the cover. Use this style: ${typographyStyle}
+          COMPOSITION: Vertical aspect ratio (3:4). Clean, professional layout.
+        `;
+
+        const response = await ai.models.generateContent({
+          model: model,
+          contents: { parts: [{ text: prompt }] },
+          config: { imageConfig: { aspectRatio: "3:4" } }
+        });
+
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+           if (part.inlineData && part.inlineData.mimeType.startsWith('image')) {
+              return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+           }
+        }
+        return undefined;
+      });
+    } catch (error) {
+      console.error("Cover generation failed:", error);
+      return undefined;
+    }
+  }
+  
+  async generateWorldMap(book: Book): Promise<string | undefined> {
+    try {
+      return await this.withRetry(async () => {
+        const ai = this.getClient();
+        const model = "gemini-2.5-flash-image";
+        const settingSummary = book.chapters.map(c => c.summary).join(' ').substring(0, 1000);
+
+        const prompt = `
+          Create a detailed world map for a ${book.genre} book titled "${book.title}".
+          The world is described as having a ${book.tone} tone. 
+          Key elements from the story include: ${settingSummary}.
+          
+          STYLE: Generate a beautiful, hand-drawn map in a vintage parchment or epic fantasy style. 
+          Include geographical features like mountains, forests, rivers, and cities that fit the genre.
+          Do NOT include any text or labels on the map. The map should be purely visual.
+          ASPECT RATIO: 16:9, landscape.
+        `;
+        
+        const response = await ai.models.generateContent({
+          model: model,
+          contents: { parts: [{ text: prompt }] },
+          config: { imageConfig: { aspectRatio: "16:9" } }
+        });
+
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+           if (part.inlineData && part.inlineData.mimeType.startsWith('image')) {
+              return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+           }
+        }
+        return undefined;
+      });
+    } catch (error) {
+      console.error("World map generation failed:", error);
+      return undefined;
+    }
+  }
+
+  async generateIllustration(sceneDescription: string, genre: string): Promise<string | undefined> {
+    try {
+      return await this.withRetry(async () => {
+        const ai = this.getClient();
+        const model = "gemini-2.5-flash-image";
+        
+        const prompt = `
+          Create a stunning, high-contrast cinematic illustration for a ${genre} story.
+          Scene Description: ${sceneDescription}
+          
+          STYLE: Cinematic, highly detailed, dramatic lighting, 8k resolution. 
+          Use rich, deep colors and strong contrast. Make it look like a movie still or concept art.
+          No text on the image.
+        `;
+
+        const response = await ai.models.generateContent({
+          model: model,
+          contents: {
+            parts: [{ text: prompt }]
+          },
+          config: {
+            imageConfig: {
+              aspectRatio: "16:9"
+            }
+          }
+        });
+
+        if (response.candidates?.[0]?.content?.parts) {
+          for (const part of response.candidates[0].content.parts) {
+             if (part.inlineData && part.inlineData.mimeType.startsWith('image')) {
+                return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+             }
+          }
+        }
+        return undefined;
+      });
+    } catch (error) {
+       console.error("Illustration failed:", error);
+       return undefined;
+    }
+  }
+
+  async generateChapterContent(bookTitle: string, chapter: Chapter, previousChapterSummary?: string): Promise<string> {
+    try {
+      return await this.withRetry(async () => {
+        const ai = this.getClient();
+        const model = "gemini-2.5-flash"; 
+        
+        const prompt = `
+          You are writing the book "${bookTitle}".
+          Write the full content for the chapter: "${chapter.title}".
+          
+          Chapter Summary: ${chapter.summary}
+          ${previousChapterSummary ? `Previous context: ${previousChapterSummary}` : ''}
+          
+          INSTRUCTIONS:
+          - Write approx 800-1200 words.
+          - Use immersive, sensory details.
+          - Maintain cinematic pacing.
+          - Focus on "Show, don't tell".
+          - Format with Markdown (bold, italics).
+          - Do NOT include the chapter title at the start. Start directly with the story.
+        `;
+
+        const response = await ai.models.generateContent({
+            model: model,
+            contents: prompt,
+        });
+
+        // FIX: response.text is a function
+        const text = response.text ? response.text() : "";
+        
+        if (text && text.trim().length > 300) {
+            return text;
+        } else {
+            throw new Error("Content generated was too short or empty.");
+        }
+      });
+    } catch (error) {
+       console.error("Chapter generation failed:", error);
+       throw error;
+    }
+  }
+
+  async rewriteText(selectedText: string, instruction: string, bookContext: string): Promise<string> {
+    try {
+      return await this.withRetry(async () => {
+        const ai = this.getClient();
+        const model = "gemini-2.5-flash";
+        const prompt = `
+          You are an expert editor. 
+          Rewrite the following text selection according to this instruction: "${instruction}".
+          
+          Context of the book: ${bookContext}
+          
+          Original Text: "${selectedText}"
+          
+          Return ONLY the rewritten text. Do not add quotes or conversational filler.
+        `;
+
+        const response = await ai.models.generateContent({
+          model: model,
+          contents: prompt,
+        });
+
+        // FIX: response.text is a function
+        return (response.text ? response.text() : "") || selectedText;
+      });
+    } catch (error) {
+      console.error("Rewrite failed:", error);
+      throw error;
+    }
+  }
+
+  async askBook(question: string, currentChapterContent: string, bookSummary: string): Promise<string> {
+    try {
+      return await this.withRetry(async () => {
+        const ai = this.getClient();
+        const model = "gemini-2.5-flash";
+        const prompt = `
+          You are the spirit of this book. Answer the reader's question based ONLY on the provided context.
+          If the answer isn't in the text, answer in the persona of the book's narrator speculating plausibly.
+          
+          Book Context: ${bookSummary}
+          Current Chapter Text: ${currentChapterContent.substring(0, 5000)}... (truncated)
+          
+          Reader Question: ${question}
+        `;
+
+        const response = await ai.models.generateContent({
+          model: model,
+          contents: prompt,
+        });
+
+        // FIX: response.text is a function
+        return (response.text ? response.text() : "") || "I am lost for words...";
+      });
+    } catch (error) {
+      return "I couldn't connect to the spirit world (API Error).";
+    }
+  }
+}
+
+export const geminiService = new GeminiService();
