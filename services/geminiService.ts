@@ -1,4 +1,4 @@
-import { GoogleGenAI, SchemaType } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Chapter, Book } from "../types";
 
 // HELPER: Cleans AI output to ensure JSON.parse doesn't fail
@@ -11,10 +11,10 @@ const cleanJson = (text: string): string => {
 
 class GeminiService {
   
-  // FIX: Updated to match your Vercel Environment Variable (VITE_GEMINI_API_KEY)
+  // FIX: Robustly check for Vercel/Vite environment variables
   private getClient(): GoogleGenAI {
     // 1. Check process.env.VITE_GEMINI_API_KEY (Vercel Server / Node)
-    // 2. Check process.env.API_KEY (Standard Backup)
+    // 2. Check process.env.API_KEY (Backup)
     // 3. Check import.meta.env.VITE_GEMINI_API_KEY (Vite Client Fallback)
     const apiKey = process.env.VITE_GEMINI_API_KEY || 
                    process.env.API_KEY || 
@@ -101,29 +101,29 @@ class GeminiService {
           systemInstruction: systemInstruction,
           responseMimeType: "application/json",
           responseSchema: {
-            type: SchemaType.OBJECT, // FIX: Use SchemaType instead of Type
+            type: 'OBJECT', // FIX: Use String Literal 'OBJECT' to avoid import errors
             properties: {
-              title: { type: SchemaType.STRING },
-              author: { type: SchemaType.STRING },
+              title: { type: 'STRING' },
+              author: { type: 'STRING' },
               chapters: {
-                type: SchemaType.ARRAY,
+                type: 'ARRAY',
                 items: {
-                  type: SchemaType.OBJECT,
+                  type: 'OBJECT',
                   properties: {
-                    title: { type: SchemaType.STRING },
-                    summary: { type: SchemaType.STRING },
+                    title: { type: 'STRING' },
+                    summary: { type: 'STRING' },
                   },
                   required: ["title", "summary"],
                 },
               },
               characters: {
-                type: SchemaType.ARRAY,
+                type: 'ARRAY',
                 items: {
-                  type: SchemaType.OBJECT,
+                  type: 'OBJECT',
                   properties: {
-                    name: { type: SchemaType.STRING },
-                    role: { type: SchemaType.STRING },
-                    description: { type: SchemaType.STRING },
+                    name: { type: 'STRING' },
+                    role: { type: 'STRING' },
+                    description: { type: 'STRING' },
                   },
                   required: ["name", "role", "description"],
                 },
@@ -134,11 +134,9 @@ class GeminiService {
         },
       });
 
-      // FIX: response.text is a function in the new SDK
-      const text = response.text ? response.text() : "{}";
+      // FIX: response.text is a PROPERTY in @google/genai SDK (not a function)
+      const text = response.text || "{}";
       
-      if (!text) throw new Error("No content generated");
-
       const data = JSON.parse(cleanJson(text));
       
       if (!data.chapters || !Array.isArray(data.chapters)) {
@@ -327,8 +325,8 @@ class GeminiService {
             contents: prompt,
         });
 
-        // FIX: response.text is a function
-        const text = response.text ? response.text() : "";
+        // FIX: response.text is a property
+        const text = response.text;
         
         if (text && text.trim().length > 300) {
             return text;
@@ -363,8 +361,7 @@ class GeminiService {
           contents: prompt,
         });
 
-        // FIX: response.text is a function
-        return (response.text ? response.text() : "") || selectedText;
+        return response.text || selectedText;
       });
     } catch (error) {
       console.error("Rewrite failed:", error);
@@ -392,8 +389,7 @@ class GeminiService {
           contents: prompt,
         });
 
-        // FIX: response.text is a function
-        return (response.text ? response.text() : "") || "I am lost for words...";
+        return response.text || "I am lost for words...";
       });
     } catch (error) {
       return "I couldn't connect to the spirit world (API Error).";
