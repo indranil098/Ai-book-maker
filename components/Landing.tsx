@@ -1,5 +1,3 @@
-
-
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles, PenTool, Book, Share2 } from 'lucide-react';
@@ -96,7 +94,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
             className="text-lg md:text-xl text-stone-600 dark:text-stone-300 max-w-2xl mx-auto mb-12 font-body leading-relaxed"
           >
             From a single idea to a complete, published book. 
-            Novelia uses advanced AI to help you write, edit, and share your stories with the world.
+            Novelia AI uses advanced AI to help you write, edit, and share your stories with the world.
           </motion.p>
 
           <motion.div
