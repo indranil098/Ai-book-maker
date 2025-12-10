@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Chapter, Book } from "../types";
 
 // HELPER: Cleans AI output to ensure JSON.parse doesn't fail
@@ -100,30 +100,31 @@ class GeminiService {
         config: {
           systemInstruction: systemInstruction,
           responseMimeType: "application/json",
+          // FIX: Use String Literals (e.g., 'OBJECT') to avoid build errors with missing exports
           responseSchema: {
-            type: Type.OBJECT,
+            type: 'OBJECT',
             properties: {
-              title: { type: Type.STRING },
-              author: { type: Type.STRING },
+              title: { type: 'STRING' },
+              author: { type: 'STRING' },
               chapters: {
-                type: Type.ARRAY,
+                type: 'ARRAY',
                 items: {
-                  type: Type.OBJECT,
+                  type: 'OBJECT',
                   properties: {
-                    title: { type: Type.STRING },
-                    summary: { type: Type.STRING },
+                    title: { type: 'STRING' },
+                    summary: { type: 'STRING' },
                   },
                   required: ["title", "summary"],
                 },
               },
               characters: {
-                type: Type.ARRAY,
+                type: 'ARRAY',
                 items: {
-                  type: Type.OBJECT,
+                  type: 'OBJECT',
                   properties: {
-                    name: { type: Type.STRING },
-                    role: { type: Type.STRING },
-                    description: { type: Type.STRING },
+                    name: { type: 'STRING' },
+                    role: { type: 'STRING' },
+                    description: { type: 'STRING' },
                   },
                   required: ["name", "role", "description"],
                 },
@@ -134,10 +135,8 @@ class GeminiService {
         },
       });
 
-      const text = response.text;
-      if (!text) throw new Error("No content generated");
-
-      // FIX: Ensure cleanJson is used here
+      const text = response.text || "{}";
+      
       const data = JSON.parse(cleanJson(text));
       
       if (!data.chapters || !Array.isArray(data.chapters)) {

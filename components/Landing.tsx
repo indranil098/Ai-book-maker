@@ -124,31 +124,50 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
         </div>
       </div>
 
-      {/* NEW Modern Typographic Footer */}
-      <motion.footer 
-        initial={{ opacity: 0, y: 50 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.3 }}
-        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full relative mt-auto border-t border-stone-200/50 dark:border-stone-800/50 bg-white/60 dark:bg-stone-950/60 backdrop-blur-xl overflow-hidden"
-      >
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-px bg-gradient-to-r from-transparent via-saffron-500 to-transparent" />
-        <div className="max-w-7xl mx-auto px-6 py-24 md:py-32 text-center">
-          
-          <h2 className="font-serif font-bold text-7xl md:text-9xl lg:text-[160px] leading-none tracking-tighter bg-gradient-to-r from-stone-800 to-stone-500 dark:from-white dark:to-stone-400 bg-clip-text text-transparent">
-            Novelia AI
-          </h2>
+      {/* NEW Minimal Modern Footer */}
+      <footer className="relative w-full border-t border-stone-200/50 dark:border-stone-800/50 bg-white/40 dark:bg-stone-950/40 backdrop-blur-xl py-24 overflow-hidden mt-20">
+        
+        {/* Ambient Glows */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-stone-300 dark:via-stone-700 to-transparent opacity-50" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-saffron-500/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[100px] pointer-events-none" />
 
-          <p className="mt-8 text-lg md:text-xl text-stone-500 dark:text-stone-400 font-medium tracking-tight">
-            Your Story, Instantly Forged.
-          </p>
+        <div className="max-w-7xl mx-auto px-6 relative z-10 flex flex-col items-center">
+            {/* Logo */}
+            <div className="mb-8 group cursor-default">
+                 <div className="flex items-center gap-4 justify-center">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden shadow-xl group-hover:scale-110 transition-transform duration-500">
+                        <img 
+                            src="https://github.com/indranil122/image/blob/main/ChatGPT%20Image%20Dec%204,%202025,%2012_50_02%20AM-Photoroom.png?raw=true" 
+                            alt="Novelia AI Logo" 
+                            className="w-full h-full object-contain" 
+                        />
+                    </div>
+                    <span className="font-serif font-bold text-4xl text-stone-900 dark:text-white tracking-tight">Novelia AI</span>
+                 </div>
+            </div>
 
-          <div className="mt-24 text-xs text-stone-400 dark:text-stone-500 font-medium uppercase tracking-wider">
-            <span>© {new Date().getFullYear()} Novelia Studio</span>
-          </div>
+            {/* Tagline */}
+             <p className="text-stone-500 dark:text-stone-400 text-center max-w-lg text-lg mb-12 font-light">
+                Reimagining the art of storytelling through the lens of artificial intelligence.
+            </p>
 
+            {/* Divider */}
+            <div className="w-24 h-1 bg-stone-200 dark:bg-stone-800 rounded-full mb-12" />
+
+             {/* Copyright */}
+             <p className="text-stone-400 dark:text-stone-600 text-sm font-medium">
+                © {new Date().getFullYear()} Novelia AI Studio. All rights reserved.
+             </p>
         </div>
-      </motion.footer>
+
+        {/* Massive Watermark */}
+        <div className="absolute bottom-[-5%] left-1/2 -translate-x-1/2 w-full select-none pointer-events-none opacity-[0.03] dark:opacity-[0.04]">
+             <h1 className="text-[18vw] font-serif font-black text-center text-stone-900 dark:text-white leading-none tracking-tighter">
+                NOVELIA
+             </h1>
+        </div>
+      </footer>
     </div>
   );
 };
