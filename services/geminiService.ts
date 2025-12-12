@@ -17,7 +17,7 @@ class GeminiService {
     // 2. Check process.env.API_KEY (Backup)
     // 3. Check import.meta.env.VITE_GEMINI_API_KEY (Vite Client Fallback)
     const apiKey = process.env.VITE_GEMINI_API_KEY || 
-                   process.env.API_KEY || 
+                   process.env.VITE_API_KEY || 
                    (typeof import.meta !== 'undefined' && (import.meta as any).env ? (import.meta as any).env.VITE_GEMINI_API_KEY : undefined);
 
     if (!apiKey) {

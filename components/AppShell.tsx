@@ -29,11 +29,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          className="pointer-events-auto w-full max-w-5xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-2xl shadow-stone-900/5 rounded-full px-2 py-2 flex items-center justify-between"
+          className="pointer-events-auto w-full max-w-5xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-2xl shadow-stone-900/5 rounded-full px-2 py-2 grid grid-cols-[1fr_auto_1fr] items-center"
         >
-            {/* Logo Section */}
+            {/* Logo Section - Left Aligned */}
             <div 
-                className="flex items-center gap-3 cursor-pointer pl-4 pr-2"
+                className="flex items-center gap-3 cursor-pointer pl-4 justify-self-start"
                 onClick={() => handleNavClick(ViewState.LANDING)}
             >
                 <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm">
@@ -48,8 +48,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
                 </span>
             </div>
 
-            {/* Desktop Nav Pills */}
-            <nav className="hidden md:flex items-center gap-1 bg-stone-100/50 p-1 rounded-full">
+            {/* Desktop Nav Pills - Center Aligned */}
+            <nav className="hidden md:flex items-center gap-1 bg-stone-200/50 backdrop-blur-lg border border-white/50 p-1.5 rounded-full shadow-inner justify-self-center">
                 {[
                 { id: ViewState.WIZARD, label: 'Create', icon: Sparkles },
                 { id: ViewState.LIBRARY, label: 'Library', icon: Library },
@@ -61,13 +61,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
                     relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2
                     ${currentView === item.id 
                         ? 'text-stone-900 shadow-sm' 
-                        : 'text-stone-500 hover:text-stone-900 hover:bg-white/50'}
+                        : 'text-stone-500 hover:text-stone-900 hover:bg-white/60'}
                     `}
                 >
                     {currentView === item.id && (
                     <motion.div
                         layoutId="nav-pill"
-                        className="absolute inset-0 bg-white rounded-full -z-10"
+                        className="absolute inset-0 bg-white rounded-full -z-10 shadow-sm"
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     />
                     )}
@@ -77,8 +77,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
                 ))}
             </nav>
 
-            {/* Right Actions */}
-            <div className="flex items-center pr-2 gap-2">
+            {/* Right Actions - Right Aligned */}
+            <div className="flex items-center justify-self-end pr-2 gap-2">
                 {/* Mobile Menu Toggle */}
                 <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
