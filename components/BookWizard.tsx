@@ -1,12 +1,58 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowRight, CheckCircle2, ImageIcon, AlertTriangle, Wand2, ChevronDown } from 'lucide-react';
+import { Sparkles, ArrowRight, CheckCircle2, ImageIcon, AlertTriangle, Wand2, ChevronDown, Sliders } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
 import { Book as BookType, GenerationParams, Chapter } from '../types';
 
 interface BookWizardProps {
   onBookCreated: (book: BookType) => void;
 }
+
+// Updated lists for clarity and broader appeal
+const GENRES = [
+  "Comedy", 
+  "Fantasy", 
+  "Sci-Fi", 
+  "Romance", 
+  "Mystery", 
+  "Thriller", 
+  "Horror", 
+  "Adventure", 
+  "Historical Fiction", 
+  "Drama", 
+  "Non-Fiction",
+  "Self-Help"
+];
+
+const TONES = [
+  "Funny & Witty", 
+  "Lighthearted & Fun",
+  "Emotional & Heartfelt",
+  "Dark & Gritty", 
+  "Suspenseful & Tense", 
+  "Inspiring & Uplifting", 
+  "Serious & Dramatic", 
+  "Whimsical & Magical",
+  "Romantic & Passionate"
+];
+
+const STYLES = [
+  "Simple & Direct",
+  "Witty & Humorous",
+  "Cinematic & Visual", 
+  "Descriptive & Flowery", 
+  "Fast-paced & Action",
+  "Journalistic & Factual"
+];
+
+const PERSPECTIVES = [
+  "Third Person Limited", "Third Person Omniscient", "First Person (I)", "Second Person (You)"
+];
+
+const PACING = [
+  "Steady & Balanced", "Fast-paced", "Slow Burn"
+];
 
 export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
   const [status, setStatus] = useState<'idle' | 'generating' | 'complete' | 'error'>('idle');
@@ -18,9 +64,12 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
   
   const [formData, setFormData] = useState<GenerationParams>({
     title: '',
-    genre: 'Dark Romance',
-    tone: 'Gothic & Mysterious',
+    genre: 'Fantasy',
+    tone: 'Whimsical & Magical',
     audience: 'Adult',
+    writingStyle: 'Cinematic & Visual',
+    perspective: 'Third Person Limited',
+    pacing: 'Steady & Balanced',
     prompt: '',
   });
 
@@ -52,6 +101,7 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
         formData.genre,
         formData.tone,
         formData.audience,
+        formData.pacing,
         formData.prompt
       );
 
@@ -74,6 +124,8 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
         const content = await geminiService.generateChapterContent(
           partialBook.title || formData.title,
           chapter,
+          formData.writingStyle,
+          formData.perspective,
           prevSummary
         );
 
@@ -99,7 +151,10 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
         chapters: fullyWrittenChapters,
         characters: partialBook.characters || [],
         createdAt: new Date(),
-        coverImage: coverImage || liveCover || `https://picsum.photos/seed/${Date.now()}/600/900`
+        coverImage: coverImage || liveCover || `https://picsum.photos/seed/${Date.now()}/600/900`,
+        style: formData.writingStyle,
+        perspective: formData.perspective,
+        pacing: formData.pacing
       };
 
       setGeneratedBook(newBook);
@@ -265,7 +320,7 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
 
   // Form View
   return (
-    <div className="max-w-3xl mx-auto py-12 px-6">
+    <div className="max-w-4xl mx-auto py-12 px-6">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -283,7 +338,7 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
         transition={{ delay: 0.1 }}
         className="bg-white/40 dark:bg-stone-900/40 backdrop-blur-xl border border-white/60 dark:border-stone-800 rounded-[2.5rem] p-8 md:p-12 shadow-xl"
       >
-          <div className="space-y-10">
+          <div className="space-y-8">
             {/* Title Input */}
             <div className="group">
                 <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 ml-2 group-focus-within:text-saffron-500 transition-colors">Book Title</label>
@@ -291,13 +346,13 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
                     type="text"
                     value={formData.title}
                     onChange={(e) => handleChange('title', e.target.value)}
-                    placeholder="e.g. The Last Alchemist"
+                    placeholder="e.g. The Comedy of Errors"
                     className="w-full bg-transparent border-b-2 border-stone-200 dark:border-stone-800 focus:border-saffron-500 px-2 py-4 text-3xl md:text-4xl font-serif font-bold text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-700 outline-none transition-colors"
                 />
             </div>
 
-            {/* Selectors */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Core Settings */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="relative group">
                     <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-2">Genre</label>
                     <div className="relative">
@@ -306,16 +361,7 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
                             onChange={(e) => handleChange('genre', e.target.value)}
                             className="w-full appearance-none bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-2xl px-6 py-4 text-lg font-medium text-stone-900 dark:text-white outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-stone-800"
                         >
-                             <option>Dark Romance</option>
-                            <option>Science Fiction</option>
-                            <option>Cyberpunk</option>
-                            <option>High Fantasy</option>
-                            <option>Cozy Mystery</option>
-                            <option>Psychological Thriller</option>
-                            <option>Romance</option>
-                            <option>Non-Fiction</option>
-                            <option>Horror</option>
-                            <option>Historical Fiction</option>
+                             {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
                         </select>
                         <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={20} />
                     </div>
@@ -328,15 +374,58 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
                             onChange={(e) => handleChange('tone', e.target.value)}
                             className="w-full appearance-none bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-2xl px-6 py-4 text-lg font-medium text-stone-900 dark:text-white outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-stone-800"
                         >
-                            <option>Gothic & Mysterious</option>
-                            <option>Adventurous & Epic</option>
-                            <option>Dark & Gritty</option>
-                            <option>Whimsical & Magical</option>
-                            <option>Witty & Humorous</option>
-                            <option>Intellectual & Academic</option>
-                            <option>Romantic & Emotional</option>
+                            {TONES.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                          <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={20} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Advanced Tuning */}
+            <div className="bg-white/50 dark:bg-stone-950/30 rounded-3xl p-6 border border-stone-100 dark:border-stone-800">
+                <div className="flex items-center gap-2 mb-4 text-stone-400">
+                    <Sliders size={14} />
+                    <span className="text-xs font-bold uppercase tracking-widest">Narrative Tuning</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="relative group">
+                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Writing Style</label>
+                        <div className="relative">
+                            <select
+                                value={formData.writingStyle}
+                                onChange={(e) => handleChange('writingStyle', e.target.value)}
+                                className="w-full appearance-none bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-3 text-sm font-medium text-stone-900 dark:text-white outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all cursor-pointer"
+                            >
+                                {STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={16} />
+                        </div>
+                    </div>
+                    <div className="relative group">
+                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Perspective</label>
+                        <div className="relative">
+                            <select
+                                value={formData.perspective}
+                                onChange={(e) => handleChange('perspective', e.target.value)}
+                                className="w-full appearance-none bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-3 text-sm font-medium text-stone-900 dark:text-white outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all cursor-pointer"
+                            >
+                                {PERSPECTIVES.map(p => <option key={p} value={p}>{p}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={16} />
+                        </div>
+                    </div>
+                    <div className="relative group">
+                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Pacing</label>
+                        <div className="relative">
+                            <select
+                                value={formData.pacing}
+                                onChange={(e) => handleChange('pacing', e.target.value)}
+                                className="w-full appearance-none bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-3 text-sm font-medium text-stone-900 dark:text-white outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all cursor-pointer"
+                            >
+                                {PACING.map(p => <option key={p} value={p}>{p}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={16} />
+                        </div>
                     </div>
                 </div>
             </div>

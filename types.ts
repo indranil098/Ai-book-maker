@@ -1,5 +1,4 @@
 
-
 export enum ViewState {
   LANDING = 'LANDING',
   WIZARD = 'WIZARD',
@@ -42,6 +41,10 @@ export interface Book {
   chapters: Chapter[];
   characters: Character[];
   createdAt: Date;
+  // Metadata for regeneration
+  style?: string;
+  perspective?: string;
+  pacing?: string;
 }
 
 export interface ChatMessage {
@@ -55,5 +58,8 @@ export interface GenerationParams {
   genre: string;
   tone: string;
   audience: string;
+  writingStyle: string;
+  perspective: string;
+  pacing: string;
   prompt: string;
 }
