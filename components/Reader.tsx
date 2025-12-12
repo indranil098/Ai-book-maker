@@ -1,9 +1,8 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Book as BookType, ChatMessage, Character } from '../types';
-import { geminiService } from '../services/geminiService';
+import { Book as BookType, Character } from '../types';
 import { markdownService } from '../services/markdownService';
-import { Play, Pause, MessageSquare, X, Send, Volume2, Settings, ChevronLeft, ChevronRight, User, Mic } from 'lucide-react';
+import { Play, Pause, Volume2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ReaderProps {
@@ -13,10 +12,6 @@ interface ReaderProps {
 export const Reader: React.FC<ReaderProps> = ({ book }) => {
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showChat, setShowChat] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [isThinking, setIsThinking] = useState(false);
   
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
 
@@ -100,22 +95,6 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
         synthesisRef.current.speak(utterance);
       }
       setIsPlaying(true);
-    }
-  };
-
-  const handleAskBook = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    const userMsg: ChatMessage = { role: 'user', text: input, timestamp: new Date() };
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-    setIsThinking(true);
-    try {
-      const answer = await geminiService.askBook(userMsg.text, activeChapter.content || '', book.chapters.map(c => c.summary).join('\n'));
-      const modelMsg: ChatMessage = { role: 'model', text: answer, timestamp: new Date() };
-      setMessages(prev => [...prev, modelMsg]);
-    } finally {
-      setIsThinking(false);
     }
   };
   
@@ -205,7 +184,7 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
           )}
         </AnimatePresence>
 
-        <div className={`flex-1 overflow-y-auto transition-all duration-300 ${showChat ? 'mr-0 md:mr-96 hidden md:block' : 'mr-0'}`}>
+        <div className={`flex-1 overflow-y-auto transition-all duration-300 mr-0`}>
           <AnimatePresence mode="wait">
             <motion.div 
               key={activeChapterIndex}
@@ -250,39 +229,7 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
           <button onClick={togglePlay} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg ${isPlaying ? 'bg-saffron-500 text-white' : 'bg-white dark:bg-stone-800'}`} title={selectedVoice ? `Read with ${selectedVoice.name}` : 'Read Aloud'}>
             {isPlaying ? <Pause size={20} /> : <Volume2 size={20} />}
           </button>
-          <button onClick={() => setShowChat(!showChat)} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg ${showChat ? 'bg-stone-800 text-white' : 'bg-white dark:bg-stone-800'}`}>
-            <MessageSquare size={20} />
-          </button>
         </div>
-
-        <AnimatePresence>
-          {showChat && (
-            <motion.div 
-              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-              className="absolute top-0 right-0 w-full md:w-96 h-full bg-white dark:bg-stone-900 border-l border-stone-200 dark:border-stone-800 shadow-2xl z-40 flex flex-col"
-            >
-              <div className="h-16 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between px-6 bg-stone-50 dark:bg-stone-900">
-                <span className="font-bold text-stone-800 dark:text-stone-200 flex items-center gap-2"><MessageSquare size={16} className="text-saffron-500"/> Ask the Book</span>
-                <button onClick={() => setShowChat(false)} className="text-stone-400 hover:text-stone-900 dark:hover:text-stone-200"><X size={18} /></button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50/50 dark:bg-stone-900/50">
-                {messages.length === 0 && <div className="text-center text-stone-400 dark:text-stone-500 mt-10 text-sm px-8"><p>I am the spirit of "{book.title}".</p><p className="mt-2">Ask me about characters, plot points, or hidden meanings.</p></div>}
-                {messages.map((msg, idx) => (
-                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-br-none' : 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-bl-none shadow-sm'}`}>{msg.text}</div>
-                  </div>
-                ))}
-                {isThinking && <div className="flex justify-start"><div className="bg-white dark:bg-stone-800 border p-3 rounded-2xl rounded-bl-none shadow-sm"><div className="flex gap-1"><span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} /><span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} /><span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} /></div></div></div>}
-              </div>
-              <form onSubmit={handleAskBook} className="p-4 border-t border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900">
-                <div className="relative">
-                  <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask a question..." className="w-full pl-4 pr-12 py-3 bg-stone-100 dark:bg-stone-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-saffron-400/50" />
-                  <button type="submit" disabled={!input.trim() || isThinking} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-lg hover:bg-saffron-500 disabled:opacity-50"><Send size={14} /></button>
-                </div>
-              </form>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );
