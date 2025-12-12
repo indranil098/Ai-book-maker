@@ -8,7 +8,7 @@ import { Reader } from './components/Reader';
 import { Library } from './components/Library';
 import { ViewState, Book } from './types';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sparkles, BookOpen } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 const IntroSplash: React.FC = () => {
   return (
@@ -46,9 +46,14 @@ const IntroSplash: React.FC = () => {
                 initial={{ scale: 0.8, opacity: 0, rotate: -10 }}
                 animate={{ scale: 1, opacity: 1, rotate: 0 }}
                 transition={{ duration: 1, type: "spring", bounce: 0.5 }}
-                className="w-24 h-24 mb-8 rounded-2xl bg-stone-900 dark:bg-white shadow-2xl flex items-center justify-center"
+                className="w-24 h-24 mb-8 rounded-2xl shadow-2xl overflow-hidden border border-white/20 relative"
             >
-                <BookOpen size={48} className="text-white dark:text-stone-900" />
+                <img 
+                    src="https://github.com/indranil122/image/blob/main/ChatGPT%20Image%20Dec%204,%202025,%2012_50_02%20AM-Photoroom.png?raw=true" 
+                    alt="Novelia Logo" 
+                    className="w-full h-full object-contain bg-white/50 backdrop-blur-md" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-tr from-saffron-500/20 to-transparent mix-blend-overlay" />
             </motion.div>
 
             <div className="overflow-hidden">

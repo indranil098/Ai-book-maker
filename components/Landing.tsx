@@ -1,7 +1,7 @@
 
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { ArrowRight, Sparkles, PenTool, Globe, Fingerprint, Layers, Book, BookOpen } from 'lucide-react';
+import { ArrowRight, Sparkles, PenTool, Globe, Fingerprint, Layers, Book } from 'lucide-react';
 
 interface LandingProps {
   onStart: () => void;
@@ -121,8 +121,12 @@ const Footer: React.FC = () => (
               {/* Brand Column */}
               <div className="flex flex-col gap-6 items-center max-w-lg">
                   <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex items-center justify-center border border-white/10">
-                         <BookOpen className="text-stone-200" size={24} />
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 p-1.5 border border-white/10">
+                        <img 
+                            src="https://github.com/indranil122/image/blob/main/ChatGPT%20Image%20Dec%204,%202025,%2012_50_02%20AM-Photoroom.png?raw=true" 
+                            alt="Novelia Logo" 
+                            className="w-full h-full object-contain" 
+                        />
                       </div>
                       <span className="font-serif font-bold text-3xl text-stone-200 tracking-tight">Novelia.</span>
                   </div>
