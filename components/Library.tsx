@@ -17,9 +17,9 @@ const BookCard: React.FC<{ book: BookModel, onSelect: (view: ViewState.EDITOR | 
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.5, delay: delay * 0.05, type: "spring", stiffness: 100 }}
-      className="group relative"
+      className="group relative w-full"
     >
-      <div className="relative aspect-[2/3] mb-5 perspective-1000">
+      <div className="relative aspect-[2/3] mb-5 perspective-1000 w-full">
         <motion.div
            whileHover={{ y: -10, rotateX: 5, rotateY: 5, scale: 1.02 }}
            transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -75,7 +75,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onDeleteB
     }
     
     return (
-        <div className="min-h-[80vh] px-6 md:px-12 pb-20">
+        <div className="min-h-[80vh] px-4 md:px-8 lg:px-12 pb-20 w-full">
             <AnimatePresence>
                 {confirmDeleteId && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-900/40 backdrop-blur-md p-4">
@@ -96,7 +96,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onDeleteB
                 )}
             </AnimatePresence>
 
-            <div className="max-w-8xl mx-auto">
+            <div className="w-full max-w-[1800px] mx-auto">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-6">
                     <div>
@@ -134,7 +134,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onDeleteB
                 </div>
 
                 {books.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-8 gap-y-16">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-8 gap-y-16 w-full">
                         <AnimatePresence>
                         {books.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((book, index) => (
                             <BookCard 
@@ -153,7 +153,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onDeleteB
                              animate={{ opacity: 1 }}
                              transition={{ delay: 0.5 }}
                              onClick={onCreateNew}
-                             className="aspect-[2/3] rounded-lg border-2 border-dashed border-stone-200 dark:border-stone-800 hover:border-saffron-400 dark:hover:border-saffron-500 group cursor-pointer flex flex-col items-center justify-center gap-4 transition-colors mb-5"
+                             className="aspect-[2/3] w-full rounded-lg border-2 border-dashed border-stone-200 dark:border-stone-800 hover:border-saffron-400 dark:hover:border-saffron-500 group cursor-pointer flex flex-col items-center justify-center gap-4 transition-colors mb-5"
                         >
                              <div className="w-16 h-16 rounded-full bg-stone-50 dark:bg-stone-900 group-hover:bg-saffron-50 dark:group-hover:bg-saffron-900/20 flex items-center justify-center transition-colors">
                                 <Plus size={24} className="text-stone-400 group-hover:text-saffron-500 transition-colors" />

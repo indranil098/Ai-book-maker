@@ -4,15 +4,16 @@ import { geminiService } from '../services/geminiService';
 import { epubService } from '../services/epubService';
 import { pdfService } from '../services/pdfService';
 import { markdownService } from '../services/markdownService';
-import { Eye, Download, PenLine, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, Wand2, Loader2, Save } from 'lucide-react';
+import { Eye, Download, PenLine, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, Wand2, Loader2, Save, Library, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface EditorProps {
   book: BookType;
   onUpdateBook: (updatedBook: BookType) => void;
+  onViewLibrary: () => void;
 }
 
-export const Editor: React.FC<EditorProps> = ({ book, onUpdateBook }) => {
+export const Editor: React.FC<EditorProps> = ({ book, onUpdateBook, onViewLibrary }) => {
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -147,7 +148,13 @@ export const Editor: React.FC<EditorProps> = ({ book, onUpdateBook }) => {
             transition={{ ease: "easeInOut", duration: 0.3 }}
             className="flex-shrink-0 bg-white/40 dark:bg-stone-900/40 backdrop-blur-xl border-r border-white/20 dark:border-white/5 flex flex-col overflow-hidden"
           >
-            <div className="p-6 border-b border-stone-200/30 dark:border-stone-800/30">
+            <div className="p-4 border-b border-stone-200/30 dark:border-stone-800/30">
+               <button 
+                onClick={onViewLibrary}
+                className="flex items-center gap-2 text-xs font-bold text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white mb-3 transition-colors uppercase tracking-wider"
+               >
+                 <ChevronLeft size={14} /> Back to Library
+               </button>
                <h3 className="font-serif font-bold text-xl text-stone-900 dark:text-white leading-tight mb-1">{book.title}</h3>
                <p className="text-xs font-bold uppercase tracking-widest text-stone-400">{book.chapters.length} Chapters</p>
             </div>
@@ -178,6 +185,7 @@ export const Editor: React.FC<EditorProps> = ({ book, onUpdateBook }) => {
                   {showSidebar ? <PanelLeftClose size={18}/> : <PanelLeftOpen size={18} />}
                </button>
                <div className="w-px h-4 bg-white/10 mx-1" />
+               <button onClick={onViewLibrary} className="p-2 hover:text-white hover:bg-white/10 rounded-full transition-colors" title="Go to Library"><Library size={18}/></button>
                <button onClick={() => setIsPreview(!isPreview)} className={`p-2 rounded-full transition-colors ${isPreview ? 'text-saffron-400 bg-white/10' : 'hover:text-white hover:bg-white/10'}`} title="Preview Mode"><Eye size={18}/></button>
                <button onClick={() => setShowRewriteModal(true)} disabled={!selectionRange} className="p-2 hover:text-white hover:bg-white/10 rounded-full transition-colors disabled:opacity-30" title="Rewrite Selection"><PenLine size={18}/></button>
                <div className="w-px h-4 bg-white/10 mx-1" />

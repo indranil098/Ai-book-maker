@@ -86,7 +86,11 @@ const App: React.FC = () => {
         return <Library books={books} onSelectBook={handleSelectBook} onDeleteBook={handleDeleteBook} onCreateNew={handleStart} />;
       case ViewState.EDITOR:
         return activeBook 
-          ? <Editor book={activeBook} onUpdateBook={handleBookUpdate} /> 
+          ? <Editor 
+              book={activeBook} 
+              onUpdateBook={handleBookUpdate} 
+              onViewLibrary={() => setView(ViewState.LIBRARY)} 
+            /> 
           : <div className="p-12 text-center text-stone-500 font-serif italic">No book selected. Please go to your library.</div>;
       case ViewState.READER:
         return activeBook 
