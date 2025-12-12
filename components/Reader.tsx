@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Book as BookType, ChatMessage, Character } from '../types';
 import { geminiService } from '../services/geminiService';
 import { markdownService } from '../services/markdownService';
-import { Play, Pause, MessageSquare, X, Send, Volume2, Settings, ChevronLeft, ChevronRight, User, Mic } from 'lucide-react';
+import { Play, Pause, MessageSquare, X, Send, Volume2, Settings, ChevronLeft, ChevronRight, User, Mic, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ReaderProps {
@@ -14,6 +14,7 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -22,6 +23,8 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
 
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
+  const [rate, setRate] = useState(1.0);
+  
   const synthesisRef = useRef<SpeechSynthesis | null>(null);
 
   const activeChapter = book.chapters[activeChapterIndex];
@@ -93,7 +96,7 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
 
         const utterance = new SpeechSynthesisUtterance(textToRead);
         if (selectedVoice) utterance.voice = selectedVoice;
-        utterance.rate = 0.95; // Slightly slower for audiobook pace
+        utterance.rate = rate; 
         utterance.pitch = 1.0; // Natural pitch
         utterance.onend = () => setIsPlaying(false);
         utterance.onerror = (e) => { console.error("TTS Error:", e); setIsPlaying(false); };
@@ -173,6 +176,20 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
           background-color: rgba(251, 191, 36, 0.15);
           text-decoration: none;
         }
+        /* Custom scrollbar for settings modal */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #d6d3d1;
+          border-radius: 4px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #44403c;
+        }
       `}</style>
 
       <div className="w-full h-1 bg-stone-200 dark:bg-stone-800 shrink-0">
@@ -200,6 +217,90 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
                   <h3 className="font-serif font-bold text-2xl text-stone-900 dark:text-white mb-1">{selectedCharacter.name}</h3>
                   <span className="text-xs font-bold uppercase tracking-widest text-saffron-600 dark:text-saffron-400 mb-4 bg-saffron-50 dark:bg-saffron-900/20 px-3 py-1 rounded-full">{selectedCharacter.role}</span>
                   <p className="text-stone-600 dark:text-stone-300 leading-relaxed text-sm mt-4">{selectedCharacter.description}</p>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Settings Modal */}
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="fixed inset-0 z-[60] flex items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4"
+               onClick={() => setShowSettings(false)}
+            >
+              <motion.div 
+                initial={{ scale: 0.95, y: 10 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 10 }}
+                className="bg-white dark:bg-stone-900 rounded-3xl shadow-2xl w-full max-w-sm border border-stone-100 dark:border-stone-800 overflow-hidden flex flex-col max-h-[85vh]"
+                onClick={e => e.stopPropagation()}
+              >
+                 <div className="p-6 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center bg-stone-50/50 dark:bg-stone-900/50">
+                    <h3 className="font-serif font-bold text-xl text-stone-900 dark:text-white flex items-center gap-2">
+                        <Settings size={20} className="text-saffron-500" />
+                        Reader Settings
+                    </h3>
+                    <button onClick={() => setShowSettings(false)} className="p-2 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-400 hover:text-stone-900 dark:hover:text-white transition-colors"><X size={20} /></button>
+                 </div>
+                 
+                 <div className="p-6 space-y-8 overflow-y-auto custom-scrollbar">
+                    {/* Speed Control */}
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">Reading Speed</span>
+                            <span className="text-sm font-bold text-stone-900 dark:text-white bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded">{rate.toFixed(1)}x</span>
+                        </div>
+                        <div className="relative h-6 flex items-center">
+                             <input 
+                                type="range" 
+                                min="0.5" 
+                                max="2.0" 
+                                step="0.1" 
+                                value={rate} 
+                                onChange={(e) => setRate(parseFloat(e.target.value))}
+                                className="w-full h-1 bg-stone-200 dark:bg-stone-700 rounded-lg appearance-none cursor-pointer accent-saffron-500 focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
+                             />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-stone-400 font-mono uppercase tracking-wider">
+                            <span>Slower</span>
+                            <span>Normal</span>
+                            <span>Faster</span>
+                        </div>
+                    </div>
+
+                    {/* Voice Selection */}
+                    <div className="space-y-3">
+                        <span className="block text-xs font-bold text-stone-400 uppercase tracking-widest">Select Voice</span>
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                            {voices.filter(v => v.lang.startsWith('en')).map((voice) => (
+                                <button 
+                                    key={voice.name}
+                                    onClick={() => setSelectedVoice(voice)}
+                                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between transition-all group ${selectedVoice?.name === voice.name ? 'bg-saffron-50 dark:bg-saffron-900/20 text-saffron-700 dark:text-saffron-400 border border-saffron-200 dark:border-saffron-800 shadow-sm' : 'bg-stone-50 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 border border-transparent'}`}
+                                >
+                                    <div className="flex flex-col">
+                                        <span className="truncate pr-4">{voice.name.replace(/(Microsoft|Google|English|United States|UK)/g, '').replace(/[()\-]/g, '').trim() || voice.name}</span>
+                                        <span className="text-[10px] opacity-60 font-normal">{voice.lang}</span>
+                                    </div>
+                                    {selectedVoice?.name === voice.name && (
+                                        <div className="w-5 h-5 bg-saffron-500 rounded-full flex items-center justify-center text-white shrink-0">
+                                            <Check size={12} />
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
+                            {voices.filter(v => v.lang.startsWith('en')).length === 0 && (
+                                <div className="text-center py-4 text-stone-400 text-sm italic">
+                                    No English voices found.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                 </div>
               </motion.div>
             </motion.div>
           )}
@@ -247,10 +348,13 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
         </div>
 
         <div className="absolute top-4 right-4 md:right-6 flex flex-col gap-3 z-20">
-          <button onClick={togglePlay} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg ${isPlaying ? 'bg-saffron-500 text-white' : 'bg-white dark:bg-stone-800'}`} title={selectedVoice ? `Read with ${selectedVoice.name}` : 'Read Aloud'}>
+          <button onClick={() => setShowSettings(true)} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${showSettings ? 'bg-stone-800 text-white' : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300'}`} title="Settings">
+            <Settings size={20} />
+          </button>
+          <button onClick={togglePlay} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg transition-all ${isPlaying ? 'bg-saffron-500 text-white scale-110' : 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white'}`} title={selectedVoice ? `Read with ${selectedVoice.name}` : 'Read Aloud'}>
             {isPlaying ? <Pause size={20} /> : <Volume2 size={20} />}
           </button>
-          <button onClick={() => setShowChat(!showChat)} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg ${showChat ? 'bg-stone-800 text-white' : 'bg-white dark:bg-stone-800'}`}>
+          <button onClick={() => setShowChat(!showChat)} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${showChat ? 'bg-stone-800 text-white' : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300'}`}>
             <MessageSquare size={20} />
           </button>
         </div>
