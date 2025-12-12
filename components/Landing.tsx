@@ -103,37 +103,57 @@ const HeroVisual: React.FC = () => (
 );
 
 const Footer: React.FC = () => (
-  <footer className="bg-stone-950 text-stone-400 py-16 border-t border-stone-900 relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6 relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
-          
-          {/* Left Side: Brand Identity */}
-          <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 p-1.5 border border-white/10">
-                    <img 
-                        src="https://github.com/indranil122/image/blob/main/ChatGPT%20Image%20Dec%204,%202025,%2012_50_02%20AM-Photoroom.png?raw=true" 
-                        alt="Novelia Logo" 
-                        className="w-full h-full object-contain" 
-                    />
+  <footer className="bg-stone-950 text-stone-400 py-24 border-t border-stone-900 relative overflow-hidden font-sans">
+      {/* Background Decorative Mesh */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
+          <svg width="100%" height="100%">
+              <pattern id="footer-grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5"/>
+              </pattern>
+              <rect width="100%" height="100%" fill="url(#footer-grid)" />
+          </svg>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="flex flex-col items-center text-center mb-20">
+              
+              {/* Brand Column */}
+              <div className="flex flex-col gap-6 items-center max-w-lg">
+                  <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 p-1.5 border border-white/10">
+                        <img 
+                            src="https://github.com/indranil122/image/blob/main/ChatGPT%20Image%20Dec%204,%202025,%2012_50_02%20AM-Photoroom.png?raw=true" 
+                            alt="Novelia Logo" 
+                            className="w-full h-full object-contain" 
+                        />
+                      </div>
+                      <span className="font-serif font-bold text-3xl text-stone-200 tracking-tight">Novelia.</span>
                   </div>
-                  <span className="font-serif font-bold text-3xl text-stone-200 tracking-tight">Novelia.</span>
+                  <p className="text-stone-500 leading-relaxed text-sm">
+                      Empowering the next generation of storytellers with adaptive AI. We blend classic literary theory with cutting-edge neural networks to help you write the unwritten.
+                  </p>
               </div>
-              <span className="hidden md:block h-5 w-px bg-stone-800" />
-              <p className="text-xs font-mono text-stone-600 uppercase tracking-[0.2em]">
-                  AI Book Studio
-              </p>
           </div>
 
-          {/* Right Side: Copyright */}
-          <div className="flex flex-col md:flex-row items-center gap-8">
-              <p className="text-xs font-mono text-stone-600 uppercase tracking-widest">
-                  © {new Date().getFullYear()} Novelia Intelligence
-              </p>
+          {/* Bottom Bar & Big Typography */}
+          <div className="border-t border-stone-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-mono text-stone-600 uppercase tracking-wider relative z-20">
+              <p>© {new Date().getFullYear()} Novelia Intelligence Inc.</p>
+              <div className="flex gap-8">
+                  <a href="#" className="hover:text-stone-400">Privacy Policy</a>
+                  <a href="#" className="hover:text-stone-400">Terms of Service</a>
+              </div>
           </div>
       </div>
+
+      {/* Massive Background Text */}
+      <div className="absolute bottom-[-5%] left-1/2 -translate-x-1/2 w-full text-center pointer-events-none select-none overflow-hidden">
+          <h1 className="text-[12rem] md:text-[20rem] font-serif font-black text-white/[0.02] leading-none tracking-tight">
+              NOVELIA
+          </h1>
+      </div>
       
-      {/* Subtle Background Glow in Footer */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1 bg-gradient-to-r from-transparent via-stone-800 to-transparent opacity-50" />
+      {/* Subtle Background Glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1 bg-gradient-to-r from-transparent via-stone-800 to-transparent opacity-50" />
   </footer>
 );
 
