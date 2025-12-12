@@ -1,4 +1,5 @@
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+
+import { GoogleGenAI, Type } from "@google/genai";
 import { Chapter, Book } from "../types";
 
 // HELPER: Cleans AI output to ensure JSON.parse doesn't fail
@@ -12,15 +13,12 @@ const cleanJson = (text: string): string => {
 class GeminiService {
   
   private getClient(): GoogleGenAI {
-    // FIX: Updated to check for VITE_GEMINI_API_KEY (Vercel/Vite)
-    // We check process.env (Server) and import.meta.env (Client fallback)
-    const apiKey = process.env.VITE_GEMINI_API_KEY || 
-                   process.env.API_KEY || 
-                   (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : undefined);
+    // API key must be obtained exclusively from process.env.API_KEY as per guidelines
+    const apiKey = process.env.API_KEY;
 
     if (!apiKey) {
       console.error("Configuration Error: API Key is missing.");
-      throw new Error("AUTH_ERROR: API Key is missing. Please check VITE_GEMINI_API_KEY in your environment variables.");
+      throw new Error("AUTH_ERROR: API Key is missing. Please check your environment variables.");
     }
     return new GoogleGenAI({ apiKey });
   }
@@ -411,31 +409,6 @@ class GeminiService {
       });
     } catch (error) {
       return "I couldn't connect to the spirit world (API Error).";
-    }
-  }
-
-  async generateSpeech(text: string, voiceName: string): Promise<string | undefined> {
-    try {
-        return await this.withRetry(async () => {
-            const ai = this.getClient();
-            const response = await ai.models.generateContent({
-                model: "gemini-2.5-flash-preview-tts",
-                contents: [{ parts: [{ text: text }] }],
-                config: {
-                    responseModalities: [Modality.AUDIO],
-                    speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName: voiceName },
-                        },
-                    },
-                },
-            });
-            
-            return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        });
-    } catch (error) {
-        console.error("TTS generation failed:", error);
-        throw error;
     }
   }
 }
