@@ -15,16 +15,6 @@ const App: React.FC = () => {
   const [books, setBooks] = useState<Book[]>([]);
   const [activeBookId, setActiveBookId] = useState<string | null>(null);
 
-  // Dark Mode State
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('novelia-theme');
-      if (saved) return saved === 'dark';
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return false;
-  });
-
   // Load books from localStorage on initial render
   useEffect(() => {
     try {
@@ -52,17 +42,11 @@ const App: React.FC = () => {
     }
   }, [books]);
 
+  // Enforce light mode cleanup on mount
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('novelia-theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('novelia-theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('novelia-theme', 'light');
+  }, []);
 
   const handleStart = () => {
     setView(ViewState.WIZARD);
@@ -103,11 +87,11 @@ const App: React.FC = () => {
       case ViewState.EDITOR:
         return activeBook 
           ? <Editor book={activeBook} onUpdateBook={handleBookUpdate} /> 
-          : <div className="p-12 text-center text-stone-500 dark:text-stone-400 font-serif italic">No book selected. Please go to your library.</div>;
+          : <div className="p-12 text-center text-stone-500 font-serif italic">No book selected. Please go to your library.</div>;
       case ViewState.READER:
         return activeBook 
           ? <Reader book={activeBook} /> 
-          : <div className="p-12 text-center text-stone-500 dark:text-stone-400 font-serif italic">No book selected to read.</div>;
+          : <div className="p-12 text-center text-stone-500 font-serif italic">No book selected to read.</div>;
       default:
         return <Landing onStart={handleStart} />;
     }
@@ -117,8 +101,6 @@ const App: React.FC = () => {
     <AppShell 
       currentView={currentView} 
       setView={setView} 
-      isDarkMode={isDarkMode}
-      toggleTheme={toggleTheme}
     >
       <AnimatePresence mode="wait">
         <motion.div

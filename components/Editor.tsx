@@ -1,11 +1,10 @@
-
 import React, { useState, useRef } from 'react';
 import { Book as BookType, Chapter } from '../types';
 import { geminiService } from '../services/geminiService';
 import { epubService } from '../services/epubService';
 import { pdfService } from '../services/pdfService';
 import { markdownService } from '../services/markdownService';
-import { Save, RefreshCw, ChevronLeft, ChevronRight, Wand2, Loader2, ImageIcon, PenLine, X, Check, Download, FileText, AlertTriangle, Menu, PanelLeftClose, PanelLeftOpen, Maximize2, Minimize2, BookCopy, Eye } from 'lucide-react';
+import { Eye, Download, PenLine, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, Wand2, Loader2, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface EditorProps {
@@ -16,9 +15,8 @@ interface EditorProps {
 export const Editor: React.FC<EditorProps> = ({ book, onUpdateBook }) => {
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingCover, setIsGeneratingCover] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isPreview, setIsPreview] = useState(false);
   
@@ -66,31 +64,14 @@ export const Editor: React.FC<EditorProps> = ({ book, onUpdateBook }) => {
 
     } catch (error) {
       console.error(error);
-      alert("Failed to generate content. Please check your connection and try again.");
+      alert("Failed to generate content.");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleRegenerateCover = async () => {
-    if (isGeneratingCover) return;
-    setIsGeneratingCover(true);
-    try {
-      const newCover = await geminiService.generateBookCover(book.title, book.genre, book.tone);
-      if (newCover) {
-        onUpdateBook({ ...book, coverImage: newCover });
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Failed to generate new cover");
-    } finally {
-      setIsGeneratingCover(false);
-    }
-  };
-
   const handleRewrite = async () => {
     if (!selectionRange || !activeChapter.content) return;
-    
     const textToRewrite = activeChapter.content.substring(selectionRange.start, selectionRange.end);
     if (!textToRewrite.trim()) return;
 
@@ -108,158 +89,136 @@ export const Editor: React.FC<EditorProps> = ({ book, onUpdateBook }) => {
       setSelectionRange(null);
       setRewriteInstruction("");
     } catch (error) {
-      console.error("Rewrite failed", error);
-      alert("Failed to rewrite selection.");
+      console.error(error);
+      alert("Failed to rewrite.");
     } finally {
       setIsRewriting(false);
     }
   };
 
-  const handleExportEpub = async () => {
+  const handleExport = async (type: 'pdf' | 'epub') => {
     setIsExporting(true);
-    try { await epubService.generateEpub(book); } 
-    catch(e) { console.error(e); alert("EPUB Export failed."); } 
+    try { 
+        if(type === 'pdf') pdfService.generatePdf(book);
+        else await epubService.generateEpub(book);
+    } 
+    catch(e) { console.error(e); alert("Export failed."); } 
     finally { setIsExporting(false); }
   };
 
-  const handleExportPdf = async () => {
-    setIsExporting(true);
-    try { pdfService.generatePdf(book); }
-    catch(e) { console.error(e); alert("PDF Export failed."); }
-    finally { setIsExporting(false); }
-  };
-
-  if (!activeChapter) {
-    return <div className="p-12 text-center text-stone-500 dark:text-stone-400">No chapters found. Please create a book first.</div>;
-  }
-
-  const isChapterEmpty = !activeChapter.content || activeChapter.content.trim().length < 10;
+  if (!activeChapter) return <div className="p-20 text-center text-stone-500">No content.</div>;
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] overflow-hidden relative bg-white/50 dark:bg-stone-950/50 backdrop-blur-xl transition-colors duration-300">
-      
-      {/* Rewrite Modal */}
+    <div className="flex h-[calc(100vh-8rem)] relative">
+      {/* Background Rewrite Modal */}
       <AnimatePresence>
         {showRewriteModal && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          >
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-900/20 backdrop-blur-sm">
             <motion.div 
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              className="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-stone-100 dark:border-stone-700"
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-2xl w-full max-w-md border border-stone-100 dark:border-stone-800"
             >
-              <div className="p-6">
-                <h3 className="font-serif font-bold text-lg mb-4">Rewrite Selection</h3>
+                <h3 className="font-serif font-bold text-lg mb-4 text-stone-900 dark:text-white">AI Rewrite</h3>
                 <textarea 
                   value={rewriteInstruction}
                   onChange={(e) => setRewriteInstruction(e.target.value)}
-                  placeholder="e.g., Make this more descriptive..."
-                  className="w-full h-24 p-2 bg-stone-100 dark:bg-stone-800 rounded-lg text-sm"
+                  placeholder="How should I change this text? (e.g. 'Make it more ominous')"
+                  className="w-full h-32 p-4 bg-stone-50 dark:bg-stone-800 rounded-xl text-sm outline-none resize-none focus:ring-2 focus:ring-saffron-500/50 mb-4 text-stone-900 dark:text-white"
+                  autoFocus
                 />
-                <div className="flex gap-2 mt-4">
-                  <button onClick={() => setShowRewriteModal(false)} className="px-4 py-2 bg-stone-200 dark:bg-stone-700 rounded-lg">Cancel</button>
-                  <button onClick={handleRewrite} disabled={isRewriting} className="px-4 py-2 bg-saffron-500 text-white rounded-lg flex-1">
-                    {isRewriting ? <Loader2 className="animate-spin mx-auto" /> : "Rewrite"}
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setShowRewriteModal(false)} className="px-4 py-2 text-stone-500 hover:text-stone-900 text-sm font-bold">Cancel</button>
+                  <button onClick={handleRewrite} disabled={isRewriting} className="px-6 py-2 bg-saffron-500 text-white rounded-lg font-bold text-sm shadow-lg shadow-saffron-500/20 flex items-center gap-2">
+                    {isRewriting ? <Loader2 className="animate-spin" size={14} /> : "Rewrite"}
                   </button>
                 </div>
-              </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
       {/* Sidebar */}
-       <AnimatePresence>
-        {!isFocusMode && (showMobileSidebar || window.innerWidth >= 768) && (
+       <AnimatePresence initial={false}>
+        {!isFocusMode && showSidebar && (
           <motion.aside 
-            initial={{ x: -300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3 }}
-            className={`absolute md:static inset-y-0 left-0 z-30 w-72 bg-white/70 dark:bg-stone-900/80 backdrop-blur-md border-r border-stone-200/50 dark:border-stone-800/50 flex flex-col transition-colors duration-300 shadow-2xl md:shadow-none ${!showMobileSidebar ? 'hidden md:block' : 'block'}`}
+            initial={{ width: 0, opacity: 0 }} 
+            animate={{ width: 300, opacity: 1 }} 
+            exit={{ width: 0, opacity: 0 }} 
+            transition={{ ease: "easeInOut", duration: 0.3 }}
+            className="flex-shrink-0 bg-white/40 dark:bg-stone-900/40 backdrop-blur-xl border-r border-white/20 dark:border-white/5 flex flex-col overflow-hidden"
           >
-            <div className="p-5 border-b border-stone-200 dark:border-stone-800 relative">
-               <div className="aspect-[3/4] w-24 rounded-md shadow-lg overflow-hidden float-right ml-4 mb-2 bg-stone-200 dark:bg-stone-800">
-                  {isGeneratingCover ? (
-                     <div className="w-full h-full flex items-center justify-center"><Loader2 className="animate-spin text-stone-400"/></div>
-                  ) : book.coverImage && <img src={book.coverImage} className="w-full h-full object-cover"/>}
-               </div>
-              <h3 className="font-serif font-bold text-stone-900 dark:text-stone-100 text-lg leading-tight mb-1">{book.title}</h3>
-              <p className="text-xs text-stone-500 dark:text-stone-400 font-medium uppercase tracking-wider">{book.chapters.length} Chapters</p>
+            <div className="p-6 border-b border-stone-200/30 dark:border-stone-800/30">
+               <h3 className="font-serif font-bold text-xl text-stone-900 dark:text-white leading-tight mb-1">{book.title}</h3>
+               <p className="text-xs font-bold uppercase tracking-widest text-stone-400">{book.chapters.length} Chapters</p>
             </div>
-            
-            <div className="flex-1 overflow-y-auto">
-                <ul className="py-2 space-y-0.5">
-                    {book.chapters.map((chapter, idx) => (
-                        <li key={chapter.id}>
-                            <button
-                                onClick={() => { setActiveChapterIndex(idx); setShowMobileSidebar(false); }}
-                                className={`w-full text-left px-5 py-3 text-sm transition-all border-l-4 ${activeChapterIndex === idx ? 'bg-white/80 dark:bg-stone-800/80 border-saffron-500 font-semibold text-stone-900 dark:text-stone-100 shadow-sm' : 'border-transparent text-stone-600 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 hover:text-stone-800 dark:hover:text-stone-200'}`}
-                            >
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="flex flex-col overflow-hidden">
-                                        <span className="text-xs text-stone-400 dark:text-stone-500 font-mono mb-0.5">Chapter {idx + 1}</span>
-                                        <span className="truncate">{chapter.title}</span>
-                                    </div>
-                                    {chapter.content && chapter.content.length > 50 && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-green-500" title="Content Generated" />}
-                                </div>
-                            </button>
-                        </li>
-                    ))}
-                </ul>
+            <div className="flex-1 overflow-y-auto p-3 space-y-1">
+                {book.chapters.map((chapter, idx) => (
+                    <button
+                        key={chapter.id}
+                        onClick={() => setActiveChapterIndex(idx)}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-all group ${activeChapterIndex === idx ? 'bg-white dark:bg-stone-800 shadow-sm text-stone-900 dark:text-white font-semibold' : 'text-stone-500 dark:text-stone-400 hover:bg-white/50 dark:hover:bg-stone-800/50'}`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className={`text-xs font-mono w-5 ${activeChapterIndex === idx ? 'text-saffron-500' : 'text-stone-300'}`}>{(idx+1).toString().padStart(2, '0')}</span>
+                            <span className="truncate flex-1">{chapter.title}</span>
+                            {chapter.content && chapter.content.length > 50 && <div className="w-1.5 h-1.5 rounded-full bg-green-400" />}
+                        </div>
+                    </button>
+                ))}
             </div>
           </motion.aside>
         )}
       </AnimatePresence>
 
-      <main className="flex-1 flex flex-col bg-transparent relative transition-colors duration-300 w-full overflow-hidden">
-        <AnimatePresence>
-            {!isFocusMode && (
-                <motion.div initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }} className="flex-shrink-0 h-16 bg-white/60 dark:bg-stone-900/60 backdrop-blur-md border-b border-stone-200/50 dark:border-stone-800/50 flex items-center justify-between px-4 gap-2">
-                    <div className="flex items-center gap-2">
-                         <button onClick={() => setShowMobileSidebar(!showMobileSidebar)} className="md:hidden p-2 text-stone-500 hover:text-stone-900 dark:hover:text-white">
-                            {showMobileSidebar ? <PanelLeftClose/> : <PanelLeftOpen />}
-                         </button>
-                         <h2 className="font-serif font-bold text-xl text-stone-900 dark:text-stone-100 truncate">{activeChapter.title}</h2>
-                    </div>
-                    <div className="flex items-center gap-2 overflow-x-auto">
-                        <button onClick={() => setIsPreview(!isPreview)} className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg ${isPreview ? 'bg-saffron-100 dark:bg-saffron-900/50 text-saffron-700 dark:text-saffron-300' : 'text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800'}`}><Eye size={14}/> Preview</button>
-                        <button onClick={() => setShowRewriteModal(true)} disabled={!selectionRange} className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed"><PenLine size={14}/> Rewrite</button>
-                        <button onClick={handleExportPdf} disabled={isExporting} className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800"><Download size={14}/> PDF</button>
-                        <button onClick={handleExportEpub} disabled={isExporting} className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800">ePub</button>
-                        <button onClick={() => setIsFocusMode(true)} className="p-2 rounded-lg text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800"><Maximize2 size={16}/></button>
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+      <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden bg-white/20 dark:bg-stone-950/20 backdrop-blur-sm">
+        {/* Floating Toolbar */}
+        {!isFocusMode && (
+           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 p-1 bg-stone-900/90 dark:bg-stone-800/90 backdrop-blur-md rounded-full text-stone-400 shadow-2xl scale-90 md:scale-100">
+               <button onClick={() => setShowSidebar(!showSidebar)} className="p-2 hover:text-white hover:bg-white/10 rounded-full transition-colors" title="Toggle Sidebar">
+                  {showSidebar ? <PanelLeftClose size={18}/> : <PanelLeftOpen size={18} />}
+               </button>
+               <div className="w-px h-4 bg-white/10 mx-1" />
+               <button onClick={() => setIsPreview(!isPreview)} className={`p-2 rounded-full transition-colors ${isPreview ? 'text-saffron-400 bg-white/10' : 'hover:text-white hover:bg-white/10'}`} title="Preview Mode"><Eye size={18}/></button>
+               <button onClick={() => setShowRewriteModal(true)} disabled={!selectionRange} className="p-2 hover:text-white hover:bg-white/10 rounded-full transition-colors disabled:opacity-30" title="Rewrite Selection"><PenLine size={18}/></button>
+               <div className="w-px h-4 bg-white/10 mx-1" />
+               <button onClick={() => handleExport('pdf')} disabled={isExporting} className="p-2 hover:text-white hover:bg-white/10 rounded-full transition-colors" title="Export PDF"><Download size={18}/></button>
+               <button onClick={() => setIsFocusMode(true)} className="p-2 hover:text-white hover:bg-white/10 rounded-full transition-colors" title="Focus Mode"><Maximize2 size={18}/></button>
+           </div>
+        )}
+
+        {isFocusMode && (
+            <button onClick={() => setIsFocusMode(false)} className="fixed top-6 right-6 z-50 p-3 bg-black/10 hover:bg-black/20 text-stone-400 hover:text-stone-900 rounded-full backdrop-blur-md transition-colors">
+                <Minimize2 size={20} />
+            </button>
+        )}
         
-        <div className={`flex-1 overflow-y-auto p-4 md:p-12 relative transition-all duration-500 ${isFocusMode ? 'max-w-4xl mx-auto w-full' : ''}`}>
-            {isFocusMode && <button onClick={() => setIsFocusMode(false)} className="fixed top-4 right-4 p-2 rounded-lg text-stone-400 bg-black/30 hover:bg-black/50 hover:text-white z-50 backdrop-blur-sm"><Minimize2 size={16}/></button>}
-           
-            {isChapterEmpty ? (
-                <div className="flex flex-col items-center justify-center h-full text-center text-stone-500 dark:text-stone-400">
-                    <div className="w-20 h-20 bg-stone-100 dark:bg-stone-800/50 rounded-2xl flex items-center justify-center text-stone-400 dark:text-stone-600 mb-6">
-                        <Wand2 size={40} />
-                    </div>
-                    <h3 className="font-serif text-2xl font-bold text-stone-700 dark:text-stone-300 mb-2">This Chapter is a Blank Page</h3>
-                    <p className="mb-6">Let the AI bring it to life.</p>
-                    <button onClick={generateContent} disabled={isGenerating} className="px-6 py-3 bg-saffron-500 hover:bg-saffron-600 text-white font-bold rounded-xl shadow-lg flex items-center gap-2">
-                        {isGenerating ? <><Loader2 className="animate-spin" size={18} /> Generating...</> : 'Generate Content'}
-                    </button>
-                </div>
-            ) : isPreview ? (
-                <div 
-                  className="prose prose-lg prose-stone dark:prose-invert max-w-none font-serif leading-loose"
-                  dangerouslySetInnerHTML={{ __html: markdownService.parse(activeChapter.content) }} 
-                />
-            ) : (
-                <textarea
-                    ref={textareaRef}
-                    value={activeChapter.content}
-                    onChange={(e) => handleContentChange(e.target.value)}
-                    onSelect={handleSelect}
-                    className="w-full h-full p-0 bg-transparent resize-none focus:outline-none font-serif text-lg leading-loose text-stone-900 dark:text-stone-200 placeholder:text-stone-400"
-                    placeholder="Start writing your chapter here..."
-                />
-            )}
+        {/* Writing Surface */}
+        <div className={`flex-1 overflow-y-auto transition-all duration-500 ${isFocusMode ? 'bg-ivory dark:bg-stone-950' : ''}`}>
+             <div className="max-w-3xl mx-auto px-8 py-24 min-h-full">
+                <h1 className="font-serif text-4xl font-bold text-stone-900 dark:text-white mb-8 text-center">{activeChapter.title}</h1>
+                
+                {(!activeChapter.content || activeChapter.content.length < 20) ? (
+                     <div className="flex flex-col items-center justify-center py-20 opacity-50 hover:opacity-100 transition-opacity">
+                        <p className="text-stone-500 dark:text-stone-400 italic mb-6">The page is blank. Let the AI begin the story.</p>
+                        <button onClick={generateContent} disabled={isGenerating} className="px-6 py-3 bg-stone-200 dark:bg-stone-800 hover:bg-saffron-500 hover:text-white dark:hover:bg-saffron-500 text-stone-600 dark:text-stone-300 rounded-full font-bold transition-all flex items-center gap-2">
+                             {isGenerating ? <Loader2 className="animate-spin" /> : <Wand2 size={18} />}
+                             Generate Content
+                        </button>
+                     </div>
+                ) : isPreview ? (
+                    <div className="prose prose-lg prose-stone dark:prose-invert max-w-none font-serif leading-loose" dangerouslySetInnerHTML={{ __html: markdownService.parse(activeChapter.content) }} />
+                ) : (
+                    <textarea
+                        ref={textareaRef}
+                        value={activeChapter.content}
+                        onChange={(e) => handleContentChange(e.target.value)}
+                        onSelect={handleSelect}
+                        className="w-full h-[calc(100vh-20rem)] resize-none bg-transparent outline-none font-serif text-lg md:text-xl leading-loose text-stone-800 dark:text-stone-200 placeholder:text-stone-300"
+                        placeholder="Start writing..."
+                        spellCheck={false}
+                    />
+                )}
+             </div>
         </div>
       </main>
     </div>

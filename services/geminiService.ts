@@ -18,7 +18,7 @@ class GeminiService {
     // 3. Check import.meta.env.VITE_GEMINI_API_KEY (Vite Client Fallback)
     const apiKey = process.env.VITE_GEMINI_API_KEY || 
                    process.env.API_KEY || 
-                   (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : undefined);
+                   (typeof import.meta !== 'undefined' && (import.meta as any).env ? (import.meta as any).env.VITE_GEMINI_API_KEY : undefined);
 
     if (!apiKey) {
       console.error("Configuration Error: API Key is missing.");
