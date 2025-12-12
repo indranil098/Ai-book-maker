@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Menu, X, Edit3, Library, Sparkles } from 'lucide-react';
 import { ViewState } from '../types';
@@ -123,8 +124,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
         )}
       </AnimatePresence>
 
-      {/* Main Content Spacer for Floating Header */}
-      <div className="h-28"></div>
+      {/* Main Content Spacer for Floating Header - Hidden on Landing to avoid gap */}
+      {currentView !== ViewState.LANDING && <div className="h-28"></div>}
 
       {/* Main Content */}
       <main className="flex-grow relative w-full max-w-[1920px] mx-auto transition-opacity duration-300">

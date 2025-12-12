@@ -170,7 +170,7 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
       } else if (msg.includes("QUOTA") || msg.includes("429")) {
         setErrorDetails("The application's API quota has been exceeded.");
       } else {
-        setErrorDetails("An unexpected error occurred during generation.");
+        setErrorDetails(`An unexpected error occurred: ${msg}`);
       }
     }
   };
@@ -183,7 +183,7 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
               <AlertTriangle size={36} />
            </div>
            <h2 className="text-3xl font-serif font-bold text-stone-900 dark:text-white mb-3">The Spell Failed</h2>
-           <p className="text-stone-500 dark:text-stone-400 mb-8 max-w-md leading-relaxed">{errorDetails}</p>
+           <p className="text-stone-500 dark:text-stone-400 mb-8 max-w-md leading-relaxed break-words">{errorDetails}</p>
            
            <button onClick={() => setStatus('idle')} className="px-8 py-3 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-full font-bold hover:bg-stone-800 transition-colors shadow-lg">
               Try Again

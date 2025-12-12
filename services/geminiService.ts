@@ -1,4 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
+
+import { GoogleGenAI, Type } from "@google/genai";
 import { Chapter, Book } from "../types";
 
 // HELPER: Cleans AI output to ensure JSON.parse doesn't fail
@@ -11,19 +12,13 @@ const cleanJson = (text: string): string => {
 
 class GeminiService {
   
-  // FIX: Updated to find 'VITE_GEMINI_API_KEY' for Vercel/Vite compatibility
   private getClient(): GoogleGenAI {
-    // 1. Check process.env.VITE_GEMINI_API_KEY (Vercel Server / Node)
-    // 2. Check process.env.API_KEY (Backup)
-    // 3. Check import.meta.env.VITE_GEMINI_API_KEY (Vite Client Fallback)
-    const apiKey = process.env.VITE_GEMINI_API_KEY || 
-                   process.env.API_KEY || 
-                   (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : undefined);
+    // API key must be obtained exclusively from process.env.API_KEY as per guidelines
+    const apiKey = process.env.API_KEY;
 
     if (!apiKey) {
       console.error("Configuration Error: API Key is missing.");
-      console.error("Checked: VITE_GEMINI_API_KEY and API_KEY.");
-      throw new Error("AUTH_ERROR: API Key is missing. Please check your Vercel Environment Variables.");
+      throw new Error("AUTH_ERROR: API Key is missing. Please check your environment variables.");
     }
     return new GoogleGenAI({ apiKey });
   }
@@ -102,31 +97,30 @@ class GeminiService {
         config: {
           systemInstruction: systemInstruction,
           responseMimeType: "application/json",
-          // FIX: Use string literals (e.g. 'OBJECT') instead of Type.OBJECT to avoid build errors
           responseSchema: {
-            type: 'OBJECT',
+            type: Type.OBJECT,
             properties: {
-              title: { type: 'STRING' },
-              author: { type: 'STRING' },
+              title: { type: Type.STRING },
+              author: { type: Type.STRING },
               chapters: {
-                type: 'ARRAY',
+                type: Type.ARRAY,
                 items: {
-                  type: 'OBJECT',
+                  type: Type.OBJECT,
                   properties: {
-                    title: { type: 'STRING' },
-                    summary: { type: 'STRING' },
+                    title: { type: Type.STRING },
+                    summary: { type: Type.STRING },
                   },
                   required: ["title", "summary"],
                 },
               },
               characters: {
-                type: 'ARRAY',
+                type: Type.ARRAY,
                 items: {
-                  type: 'OBJECT',
+                  type: Type.OBJECT,
                   properties: {
-                    name: { type: 'STRING' },
-                    role: { type: 'STRING' },
-                    description: { type: 'STRING' },
+                    name: { type: Type.STRING },
+                    role: { type: Type.STRING },
+                    description: { type: Type.STRING },
                   },
                   required: ["name", "role", "description"],
                 },

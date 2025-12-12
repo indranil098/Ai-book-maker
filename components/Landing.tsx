@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Sparkles, PenTool, Globe, Fingerprint, Layers, Book } from 'lucide-react';
@@ -181,14 +182,14 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex flex-col gap-8"
+                    className="flex flex-col gap-6 md:gap-8"
                  >
                     <div className="flex items-center gap-4">
                         <span className="h-px w-12 bg-saffron-500"></span>
                         <span className="font-mono text-xs uppercase tracking-[0.3em] text-stone-500">Intelligence v3.0</span>
                     </div>
 
-                    <h1 className="font-serif text-[5rem] md:text-[6rem] lg:text-[8rem] font-bold leading-[0.9] text-stone-900 dark:text-stone-100 tracking-tight">
+                    <h1 className="font-serif text-5xl sm:text-7xl md:text-[6rem] lg:text-[8rem] font-bold leading-[0.9] text-stone-900 dark:text-stone-100 tracking-tight">
                         UN<br/>WRITTEN
                     </h1>
 
@@ -225,7 +226,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
       <ScrollTicker />
 
       {/* --- FEATURE GRID --- */}
-      <section className="py-40 px-6 relative z-10">
+      <section className="py-24 md:py-40 px-6 relative z-10">
           <div className="max-w-7xl mx-auto">
               <div className="mb-24 flex flex-col md:flex-row justify-between items-end gap-6 border-b border-stone-200 dark:border-stone-800 pb-8">
                   <h2 className="text-5xl md:text-7xl font-serif font-bold text-stone-900 dark:text-white leading-[0.9]">
@@ -287,7 +288,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
       </section>
 
       {/* --- STATEMENT SECTION --- */}
-      <section className="py-32 bg-stone-900 text-stone-100 px-6 relative overflow-hidden">
+      <section className="py-24 md:py-32 bg-stone-900 text-stone-100 px-6 relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
                 <svg width="100%" height="100%">
                     <pattern id="pattern-circles" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
