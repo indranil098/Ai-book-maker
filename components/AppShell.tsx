@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Menu, X, Edit3, Library, Sparkles } from 'lucide-react';
+import { Menu, X, Edit3, Library, Sparkles, BookOpen } from 'lucide-react';
 import { ViewState } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import FluidBackground from './FluidBackground';
@@ -37,12 +37,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
                 className="flex items-center gap-3 cursor-pointer pl-4 justify-self-start"
                 onClick={() => handleNavClick(ViewState.LANDING)}
             >
-                <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm opacity-90">
-                <img 
-                    src="https://github.com/indranil122/image/blob/main/ChatGPT%20Image%20Dec%204,%202025,%2012_50_02%20AM-Photoroom.png?raw=true" 
-                    alt="Novelia AI Logo" 
-                    className="w-full h-full object-contain" 
-                />
+                <div className="w-8 h-8 rounded-lg bg-stone-900 dark:bg-stone-100 flex items-center justify-center shadow-sm">
+                    <BookOpen size={18} className="text-white dark:text-stone-900" />
                 </div>
                 <span className="font-serif font-bold text-xl tracking-tight text-stone-900 hidden sm:block">
                 Novelia<span className="text-saffron-500">.</span>
