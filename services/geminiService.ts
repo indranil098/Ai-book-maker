@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { Chapter, Book } from "../types";
 
 // HELPER: Cleans AI output to ensure JSON.parse doesn't fail
@@ -409,6 +409,31 @@ class GeminiService {
       });
     } catch (error) {
       return "I couldn't connect to the spirit world (API Error).";
+    }
+  }
+
+  async generateSpeech(text: string, voiceName: string): Promise<string | undefined> {
+    try {
+        return await this.withRetry(async () => {
+            const ai = this.getClient();
+            const response = await ai.models.generateContent({
+                model: "gemini-2.5-flash-preview-tts",
+                contents: [{ parts: [{ text: text }] }],
+                config: {
+                    responseModalities: [Modality.AUDIO],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: voiceName },
+                        },
+                    },
+                },
+            });
+            
+            return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        });
+    } catch (error) {
+        console.error("TTS generation failed:", error);
+        throw error;
     }
   }
 }

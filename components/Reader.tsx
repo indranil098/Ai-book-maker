@@ -3,108 +3,164 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Book as BookType, ChatMessage, Character } from '../types';
 import { geminiService } from '../services/geminiService';
 import { markdownService } from '../services/markdownService';
-import { Play, Pause, MessageSquare, X, Send, Volume2, Settings, ChevronLeft, ChevronRight, User, Mic, Check } from 'lucide-react';
+import { Play, Pause, MessageSquare, X, Send, Volume2, Settings, ChevronLeft, ChevronRight, Check, Loader2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ReaderProps {
   book: BookType;
 }
 
+// Available Gemini Voices
+const GEMINI_VOICES = [
+  { name: 'Kore', gender: 'Female', style: 'Soothing' },
+  { name: 'Puck', gender: 'Male', style: 'Soft' },
+  { name: 'Charon', gender: 'Male', style: 'Deep' },
+  { name: 'Fenrir', gender: 'Male', style: 'Intense' },
+  { name: 'Zephyr', gender: 'Female', style: 'Calm' }
+];
+
+// Audio decoding helper functions
+function decode(base64: string) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function decodeAudioData(
+  data: Uint8Array,
+  ctx: AudioContext,
+  sampleRate: number = 24000,
+  numChannels: number = 1
+): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
+  return buffer;
+}
+
 export const Reader: React.FC<ReaderProps> = ({ book }) => {
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
 
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
-  const [rate, setRate] = useState(1.0);
-  
-  const synthesisRef = useRef<SpeechSynthesis | null>(null);
+  // Audio State
+  const [selectedVoice, setSelectedVoice] = useState(GEMINI_VOICES[0]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const activeChapter = book.chapters[activeChapterIndex];
 
-  // Initialize and load TTS voices
+  // Initialize Audio Context
   useEffect(() => {
-    synthesisRef.current = window.speechSynthesis;
-    const loadVoices = () => {
-      const available = window.speechSynthesis.getVoices();
-      if (available.length === 0) return;
-      setVoices(available);
-      
-      const rankedVoices = [
-        // Premium Natural Voices
-        'Microsoft Zira - English (United States)',
-        'Microsoft David - English (United States)',
-        'Google US English', 
-        'Google UK English Female',
-        'Google UK English Male',
-        'Samantha', // Apple
-        'Alex',     // Apple
-        'Daniel',   // Apple UK
-        // Standard High Quality
-        'Microsoft Zira Online (Natural) - English (United States)',
-        'Microsoft Guy Online (Natural) - English (United States)',
-      ];
-      let bestVoice: SpeechSynthesisVoice | null = null;
-      for (const name of rankedVoices) {
-          const found = available.find(v => v.name === name && v.lang.startsWith('en'));
-          if (found) { bestVoice = found; break; }
-      }
-      if (!bestVoice) {
-          bestVoice = available.find(v => v.lang === 'en-US' && v.default) || available.find(v => v.lang.startsWith('en'));
-      }
-      if (bestVoice) setSelectedVoice(bestVoice);
+    return () => {
+       stopAudio();
+       if (audioContextRef.current) {
+         audioContextRef.current.close();
+       }
     };
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-    loadVoices();
-    return () => { if (synthesisRef.current) synthesisRef.current.cancel(); };
   }, []);
 
-  // CRITICAL BUG FIX: Stop TTS when chapter changes
-  useEffect(() => {
-    if (synthesisRef.current) {
-      synthesisRef.current.cancel();
-      setIsPlaying(false);
+  const stopAudio = () => {
+    if (audioSourceRef.current) {
+      try {
+        audioSourceRef.current.stop();
+        audioSourceRef.current.disconnect();
+      } catch (e) {
+        // Ignore errors if already stopped
+      }
+      audioSourceRef.current = null;
     }
-  }, [activeChapterIndex]);
+    setIsPlaying(false);
+    setIsLoadingAudio(false);
+  };
 
+  const playAudio = async () => {
+    if (!activeChapter.content) return;
+    
+    // Resume context if suspended (browser autoplay policy)
+    if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});
+    }
+    if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+    }
 
-  const togglePlay = () => {
-    if (!synthesisRef.current) return;
-    if (isPlaying) {
-      synthesisRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      if (synthesisRef.current.paused) {
-        synthesisRef.current.resume();
-      } else {
-        synthesisRef.current.cancel();
-        
-        // Use markdownService to get clean text for speech
-        const html = markdownService.parse(activeChapter.content || activeChapter.summary);
+    setIsLoadingAudio(true);
+    setIsPlaying(true);
+
+    try {
+        // Prepare text - Strip HTML tags and limit length for optimal generation if needed
+        const html = markdownService.parse(activeChapter.content);
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
-        const textToRead = tempDiv.textContent || tempDiv.innerText || '';
+        let textToRead = tempDiv.textContent || tempDiv.innerText || '';
+        
+        // Basic truncation to avoid hitting huge limits, though 2.5 flash handles large context well.
+        // For a smoother UX, we might split by paragraphs, but for this "Audiobook" feature, 
+        // we'll send the full chapter text (assuming < 10k chars usually).
+        textToRead = textToRead.substring(0, 10000); 
 
-        const utterance = new SpeechSynthesisUtterance(textToRead);
-        if (selectedVoice) utterance.voice = selectedVoice;
-        utterance.rate = rate; 
-        utterance.pitch = 1.0; // Natural pitch
-        utterance.onend = () => setIsPlaying(false);
-        utterance.onerror = (e) => { console.error("TTS Error:", e); setIsPlaying(false); };
-        synthesisRef.current.speak(utterance);
-      }
-      setIsPlaying(true);
+        const base64Audio = await geminiService.generateSpeech(textToRead, selectedVoice.name);
+        
+        if (!base64Audio) throw new Error("No audio generated");
+
+        if (!isPlaying) return; // If user stopped while loading
+
+        const audioBuffer = await decodeAudioData(
+            decode(base64Audio),
+            audioContextRef.current,
+            24000,
+            1
+        );
+
+        const source = audioContextRef.current.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContextRef.current.destination);
+        
+        source.onended = () => {
+            setIsPlaying(false);
+        };
+
+        audioSourceRef.current = source;
+        source.start();
+        setIsLoadingAudio(false);
+
+    } catch (error) {
+        console.error("Audio playback error:", error);
+        stopAudio();
+        alert("Could not generate audio for this chapter.");
     }
   };
+
+  const togglePlay = () => {
+    if (isPlaying || isLoadingAudio) {
+      stopAudio();
+    } else {
+      playAudio();
+    }
+  };
+
+  // Stop audio when changing chapters
+  useEffect(() => {
+    stopAudio();
+  }, [activeChapterIndex]);
 
   const handleAskBook = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,19 +181,13 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
   const processedContent = useMemo(() => {
     if (!activeChapter.content) return '';
     let html = markdownService.parse(activeChapter.content);
-    
-    // Sort characters by name length, longest first, to avoid partial matches (e.g., matching "Ed" inside "Edward")
     const sortedCharacters = [...book.characters].sort((a, b) => b.name.length - a.name.length);
-
     sortedCharacters.forEach(character => {
-      // This regex finds the character name as a whole word, not as part of another word.
-      // It uses a negative lookbehind and lookahead to ensure it's not part of a larger alphanumeric sequence.
       const regex = new RegExp(`(?<!\\w)(${character.name})(?!\\w)`, 'gi');
       html = html.replace(regex, (match) => 
         `<span class="character-highlight" data-character-name="${character.name}">${match}</span>`
       );
     });
-
     return html;
   }, [activeChapter.content, book.characters]);
 
@@ -146,9 +196,7 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
     if (target.classList.contains('character-highlight')) {
       const charName = target.getAttribute('data-character-name');
       const character = book.characters.find(c => c.name === charName);
-      if (character) {
-        setSelectedCharacter(character);
-      }
+      if (character) setSelectedCharacter(character);
     }
   };
 
@@ -161,35 +209,15 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
     <div className="flex flex-col h-[calc(100vh-5rem)] bg-white/50 dark:bg-stone-950/50 backdrop-blur-xl relative overflow-hidden transition-colors duration-300">
       <style>{`
         .character-highlight {
-          color: #D97706; /* saffron-600 */
-          text-decoration: underline;
-          text-decoration-style: dotted;
-          text-decoration-color: rgba(217, 119, 6, 0.5);
-          cursor: pointer;
-          transition: all 0.2s ease-in-out;
+          color: #D97706; text-decoration: underline; text-decoration-style: dotted;
+          text-decoration-color: rgba(217, 119, 6, 0.5); cursor: pointer; transition: all 0.2s ease-in-out;
         }
-        .dark .character-highlight {
-          color: #FBBF24; /* saffron-400 */
-          text-decoration-color: rgba(251, 191, 36, 0.5);
-        }
-        .character-highlight:hover {
-          background-color: rgba(251, 191, 36, 0.15);
-          text-decoration: none;
-        }
-        /* Custom scrollbar for settings modal */
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #d6d3d1;
-          border-radius: 4px;
-        }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #44403c;
-        }
+        .dark .character-highlight { color: #FBBF24; text-decoration-color: rgba(251, 191, 36, 0.5); }
+        .character-highlight:hover { background-color: rgba(251, 191, 36, 0.15); text-decoration: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #d6d3d1; border-radius: 4px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #44403c; }
       `}</style>
 
       <div className="w-full h-1 bg-stone-200 dark:bg-stone-800 shrink-0">
@@ -236,68 +264,39 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
                 initial={{ scale: 0.95, y: 10 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.95, y: 10 }}
-                className="bg-white dark:bg-stone-900 rounded-3xl shadow-2xl w-full max-w-sm border border-stone-100 dark:border-stone-800 overflow-hidden flex flex-col max-h-[85vh]"
+                className="bg-white dark:bg-stone-900 rounded-3xl shadow-2xl w-full max-w-sm border border-stone-100 dark:border-stone-800 overflow-hidden flex flex-col"
                 onClick={e => e.stopPropagation()}
               >
                  <div className="p-6 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center bg-stone-50/50 dark:bg-stone-900/50">
                     <h3 className="font-serif font-bold text-xl text-stone-900 dark:text-white flex items-center gap-2">
-                        <Settings size={20} className="text-saffron-500" />
-                        Reader Settings
+                        <Sparkles size={20} className="text-saffron-500" />
+                        Audiobook Settings
                     </h3>
                     <button onClick={() => setShowSettings(false)} className="p-2 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-400 hover:text-stone-900 dark:hover:text-white transition-colors"><X size={20} /></button>
                  </div>
                  
-                 <div className="p-6 space-y-8 overflow-y-auto custom-scrollbar">
-                    {/* Speed Control */}
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">Reading Speed</span>
-                            <span className="text-sm font-bold text-stone-900 dark:text-white bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded">{rate.toFixed(1)}x</span>
-                        </div>
-                        <div className="relative h-6 flex items-center">
-                             <input 
-                                type="range" 
-                                min="0.5" 
-                                max="2.0" 
-                                step="0.1" 
-                                value={rate} 
-                                onChange={(e) => setRate(parseFloat(e.target.value))}
-                                className="w-full h-1 bg-stone-200 dark:bg-stone-700 rounded-lg appearance-none cursor-pointer accent-saffron-500 focus:outline-none focus:ring-2 focus:ring-saffron-500/50"
-                             />
-                        </div>
-                        <div className="flex justify-between text-[10px] text-stone-400 font-mono uppercase tracking-wider">
-                            <span>Slower</span>
-                            <span>Normal</span>
-                            <span>Faster</span>
-                        </div>
-                    </div>
-
+                 <div className="p-6 space-y-6">
                     {/* Voice Selection */}
                     <div className="space-y-3">
-                        <span className="block text-xs font-bold text-stone-400 uppercase tracking-widest">Select Voice</span>
-                        <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                            {voices.filter(v => v.lang.startsWith('en')).map((voice) => (
+                        <span className="block text-xs font-bold text-stone-400 uppercase tracking-widest">Narrator Voice</span>
+                        <div className="grid gap-2">
+                            {GEMINI_VOICES.map((voice) => (
                                 <button 
                                     key={voice.name}
                                     onClick={() => setSelectedVoice(voice)}
-                                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between transition-all group ${selectedVoice?.name === voice.name ? 'bg-saffron-50 dark:bg-saffron-900/20 text-saffron-700 dark:text-saffron-400 border border-saffron-200 dark:border-saffron-800 shadow-sm' : 'bg-stone-50 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 border border-transparent'}`}
+                                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between transition-all group ${selectedVoice.name === voice.name ? 'bg-saffron-50 dark:bg-saffron-900/20 text-saffron-700 dark:text-saffron-400 border border-saffron-200 dark:border-saffron-800 shadow-sm' : 'bg-stone-50 dark:bg-stone-800/50 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 border border-transparent'}`}
                                 >
                                     <div className="flex flex-col">
-                                        <span className="truncate pr-4">{voice.name.replace(/(Microsoft|Google|English|United States|UK)/g, '').replace(/[()\-]/g, '').trim() || voice.name}</span>
-                                        <span className="text-[10px] opacity-60 font-normal">{voice.lang}</span>
+                                        <span className="font-bold">{voice.name}</span>
+                                        <span className="text-[10px] opacity-60 font-normal">{voice.gender} • {voice.style}</span>
                                     </div>
-                                    {selectedVoice?.name === voice.name && (
+                                    {selectedVoice.name === voice.name && (
                                         <div className="w-5 h-5 bg-saffron-500 rounded-full flex items-center justify-center text-white shrink-0">
                                             <Check size={12} />
                                         </div>
                                     )}
                                 </button>
                             ))}
-                            {voices.filter(v => v.lang.startsWith('en')).length === 0 && (
-                                <div className="text-center py-4 text-stone-400 text-sm italic">
-                                    No English voices found.
-                                </div>
-                            )}
                         </div>
                     </div>
                  </div>
@@ -348,11 +347,11 @@ export const Reader: React.FC<ReaderProps> = ({ book }) => {
         </div>
 
         <div className="absolute top-4 right-4 md:right-6 flex flex-col gap-3 z-20">
-          <button onClick={() => setShowSettings(true)} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${showSettings ? 'bg-stone-800 text-white' : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300'}`} title="Settings">
+          <button onClick={() => setShowSettings(true)} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${showSettings ? 'bg-stone-800 text-white' : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300'}`} title="Audio Settings">
             <Settings size={20} />
           </button>
-          <button onClick={togglePlay} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg transition-all ${isPlaying ? 'bg-saffron-500 text-white scale-110' : 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white'}`} title={selectedVoice ? `Read with ${selectedVoice.name}` : 'Read Aloud'}>
-            {isPlaying ? <Pause size={20} /> : <Volume2 size={20} />}
+          <button onClick={togglePlay} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg transition-all ${isPlaying || isLoadingAudio ? 'bg-saffron-500 text-white scale-110' : 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white'}`} title={isPlaying ? "Pause Audiobook" : "Play Audiobook"}>
+            {isLoadingAudio ? <Loader2 size={20} className="animate-spin" /> : isPlaying ? <Pause size={20} /> : <Volume2 size={20} />}
           </button>
           <button onClick={() => setShowChat(!showChat)} className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${showChat ? 'bg-stone-800 text-white' : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300'}`}>
             <MessageSquare size={20} />
