@@ -30,14 +30,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          className="pointer-events-auto w-full max-w-5xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-2xl shadow-stone-900/5 rounded-full px-2 py-2 grid grid-cols-[1fr_auto_1fr] items-center"
+          className="pointer-events-auto w-full max-w-5xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg shadow-stone-900/5 rounded-full px-2 py-2 grid grid-cols-[1fr_auto_1fr] items-center"
         >
             {/* Logo Section - Left Aligned */}
             <div 
                 className="flex items-center gap-3 cursor-pointer pl-4 justify-self-start"
                 onClick={() => handleNavClick(ViewState.LANDING)}
             >
-                <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm">
+                <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm opacity-90">
                 <img 
                     src="https://github.com/indranil122/image/blob/main/ChatGPT%20Image%20Dec%204,%202025,%2012_50_02%20AM-Photoroom.png?raw=true" 
                     alt="Novelia AI Logo" 
@@ -50,7 +50,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
             </div>
 
             {/* Desktop Nav Pills - Center Aligned */}
-            <nav className="hidden md:flex items-center gap-1 bg-stone-200/50 backdrop-blur-lg border border-white/50 p-1.5 rounded-full shadow-inner justify-self-center">
+            <nav className="hidden md:flex items-center gap-1 bg-white/5 backdrop-blur-sm border border-white/10 p-1.5 rounded-full shadow-sm justify-self-center">
                 {[
                 { id: ViewState.WIZARD, label: 'Create', icon: Sparkles },
                 { id: ViewState.LIBRARY, label: 'Library', icon: Library },
@@ -61,18 +61,18 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
                     className={`
                     relative px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2
                     ${currentView === item.id 
-                        ? 'text-stone-900 shadow-sm' 
-                        : 'text-stone-500 hover:text-stone-900 hover:bg-white/60'}
+                        ? 'text-stone-900 shadow-sm font-bold' 
+                        : 'text-stone-600 hover:text-stone-900 hover:bg-white/20'}
                     `}
                 >
                     {currentView === item.id && (
                     <motion.div
                         layoutId="nav-pill"
-                        className="absolute inset-0 bg-white rounded-full -z-10 shadow-sm"
+                        className="absolute inset-0 bg-white/40 shadow-sm rounded-full -z-10"
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     />
                     )}
-                    <item.icon size={14} className={currentView === item.id ? "text-saffron-500" : ""} />
+                    <item.icon size={14} className={currentView === item.id ? "text-saffron-600" : ""} />
                     {item.label}
                 </button>
                 ))}
@@ -83,7 +83,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
                 {/* Mobile Menu Toggle */}
                 <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-3 text-stone-900 bg-stone-100 rounded-full"
+                className="md:hidden p-3 text-stone-900 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full transition-colors"
                 >
                 {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
                 </button>
@@ -98,11 +98,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-x-4 top-24 z-40 bg-white/90 backdrop-blur-2xl rounded-3xl p-4 md:hidden border border-stone-200 shadow-2xl origin-top"
+            className="fixed inset-x-4 top-24 z-40 bg-white/80 backdrop-blur-xl rounded-3xl p-4 md:hidden border border-white/20 shadow-2xl origin-top"
           >
              <nav className="flex flex-col gap-2">
-                <button onClick={() => handleNavClick(ViewState.WIZARD)} className="flex items-center gap-4 p-4 hover:bg-stone-50 rounded-2xl transition-colors">
-                  <div className="w-10 h-10 bg-saffron-100 text-saffron-600 rounded-xl flex items-center justify-center">
+                <button onClick={() => handleNavClick(ViewState.WIZARD)} className="flex items-center gap-4 p-4 hover:bg-white/50 rounded-2xl transition-colors">
+                  <div className="w-10 h-10 bg-saffron-100/50 text-saffron-600 rounded-xl flex items-center justify-center">
                     <Edit3 size={20} />
                   </div>
                   <div className="text-left">
@@ -112,9 +112,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children, currentView, setVi
                 
                 <button 
                   onClick={() => handleNavClick(ViewState.LIBRARY)} 
-                  className="flex items-center gap-4 p-4 hover:bg-stone-50 rounded-2xl transition-colors"
+                  className="flex items-center gap-4 p-4 hover:bg-white/50 rounded-2xl transition-colors"
                 >
-                    <div className="w-10 h-10 bg-stone-100 text-stone-600 rounded-xl flex items-center justify-center">
+                    <div className="w-10 h-10 bg-stone-100/50 text-stone-600 rounded-xl flex items-center justify-center">
                         <Library size={20} />
                     </div>
                    <span className="font-bold text-stone-900">My Library</span>

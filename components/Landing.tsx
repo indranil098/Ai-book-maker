@@ -287,28 +287,47 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
           </div>
       </section>
 
-      {/* --- STATEMENT SECTION --- */}
-      <section className="py-24 md:py-32 bg-stone-900 text-stone-100 px-6 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-                <svg width="100%" height="100%">
-                    <pattern id="pattern-circles" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                        <circle cx="2" cy="2" r="1" className="text-white" fill="currentColor" />
-                    </pattern>
-                    <rect x="0" y="0" width="100%" height="100%" fill="url(#pattern-circles)" />
-                </svg>
-          </div>
+      {/* --- STATEMENT SECTION (REVAMPED) --- */}
+      <section className="py-32 md:py-48 bg-stone-950 text-stone-100 px-6 relative overflow-hidden flex flex-col items-center justify-center border-t border-stone-900">
           
-          <div className="max-w-4xl mx-auto text-center relative z-10">
-              <Sparkles className="w-16 h-16 text-saffron-500 mx-auto mb-12 animate-pulse" />
-              <h2 className="text-4xl md:text-6xl font-serif font-bold mb-8 leading-tight">
-                  "The most advanced tool isn't the one that writes for you.<br/> It's the one that helps you write."
-              </h2>
-              <button 
-                onClick={onStart}
-                className="mt-12 px-12 py-5 border border-stone-700 rounded-full hover:bg-saffron-500 hover:text-white hover:border-saffron-500 transition-all duration-300 font-bold tracking-widest uppercase text-xs"
+          {/* Ambient Background */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl opacity-30 pointer-events-none">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-saffron-500/10 rounded-full blur-[100px]" />
+          </div>
+
+          {/* Grid Pattern */}
+           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+                style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '40px 40px' }}>
+           </div>
+          
+          <div className="max-w-5xl mx-auto text-center relative z-10">
+
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-4xl md:text-6xl lg:text-7xl font-serif font-medium mb-10 leading-[1.1] tracking-tight"
               >
-                  Start Your Masterpiece
-              </button>
+                  <span className="text-stone-400">"The most advanced tool isn't the one that writes <span className="text-stone-600 italic">for you</span>.</span>
+                  <br className="hidden md:block" />
+                  <span className="text-stone-100">It's the one that <span className="text-saffron-500 font-bold border-b-4 border-saffron-500/20 pb-1">helps you write</span>."</span>
+              </motion.h2>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2 }}
+              >
+                  <button 
+                    onClick={onStart}
+                    className="group relative px-12 py-6 bg-stone-100 text-stone-950 font-bold text-sm tracking-widest uppercase rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-[0_0_50px_-10px_rgba(255,255,255,0.3)]"
+                  >
+                      <span className="relative z-10 flex items-center gap-3">
+                          Start Your Masterpiece <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </span>
+                  </button>
+              </motion.div>
           </div>
       </section>
 
