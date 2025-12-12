@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AppShell } from './components/AppShell';
 import { Landing } from './components/Landing';
@@ -7,13 +8,96 @@ import { Reader } from './components/Reader';
 import { Library } from './components/Library';
 import { ViewState, Book } from './types';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
+
+const IntroSplash: React.FC = () => {
+  return (
+    <motion.div
+      key="intro-splash"
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
+      transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#FDFCF8] dark:bg-[#0c0a09]"
+    >
+        {/* Background Gradients for Splash */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <motion.div 
+                animate={{ 
+                    scale: [1, 1.2, 1],
+                    opacity: [0.3, 0.5, 0.3],
+                    rotate: [0, 90, 0]
+                }}
+                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                className="absolute top-1/4 left-1/4 w-96 h-96 bg-saffron-500/10 rounded-full blur-[100px]" 
+            />
+            <motion.div 
+                animate={{ 
+                    scale: [1, 1.1, 1],
+                    opacity: [0.2, 0.4, 0.2],
+                    rotate: [0, -60, 0]
+                }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-stone-500/10 rounded-full blur-[100px]" 
+            />
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center">
+            <motion.div
+                initial={{ scale: 0.8, opacity: 0, rotate: -10 }}
+                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                transition={{ duration: 1, type: "spring", bounce: 0.5 }}
+                className="w-24 h-24 mb-8 rounded-2xl shadow-2xl overflow-hidden border border-white/20 relative"
+            >
+                <img 
+                    src="https://github.com/indranil122/image/blob/main/ChatGPT%20Image%20Dec%204,%202025,%2012_50_02%20AM-Photoroom.png?raw=true" 
+                    alt="Novelia Logo" 
+                    className="w-full h-full object-contain bg-white/50 backdrop-blur-md" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-tr from-saffron-500/20 to-transparent mix-blend-overlay" />
+            </motion.div>
+
+            <div className="overflow-hidden">
+                <motion.h1
+                    initial={{ y: 50, opacity: 0, filter: "blur(10px)" }}
+                    animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+                    transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
+                    className="font-serif text-5xl md:text-7xl font-bold text-stone-900 dark:text-stone-100 tracking-tight mb-4 text-center"
+                >
+                    Novelia AI
+                    <span className="text-saffron-500">.</span>
+                </motion.h1>
+            </div>
+
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 1, delay: 0.8 }}
+                className="flex items-center gap-2 text-stone-500 dark:text-stone-400 font-mono text-xs uppercase tracking-[0.3em]"
+            >
+                <Sparkles size={12} className="text-saffron-500" />
+                <span>The Unwritten Awaits</span>
+                <Sparkles size={12} className="text-saffron-500" />
+            </motion.div>
+        </div>
+    </motion.div>
+  );
+};
 
 const App: React.FC = () => {
   const [currentView, setView] = useState<ViewState>(ViewState.LANDING);
+  const [showIntro, setShowIntro] = useState(true);
   
   // State management for multiple books
   const [books, setBooks] = useState<Book[]>([]);
   const [activeBookId, setActiveBookId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Intro timer
+    const timer = setTimeout(() => {
+        setShowIntro(false);
+    }, 2800); // Intro duration
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load books from localStorage on initial render
   useEffect(() => {
@@ -102,23 +186,29 @@ const App: React.FC = () => {
   };
 
   return (
-    <AppShell 
-      currentView={currentView} 
-      setView={setView} 
-    >
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentView}
-          initial={{ opacity: 0, filter: 'blur(10px)' }}
-          animate={{ opacity: 1, filter: 'blur(0px)' }}
-          exit={{ opacity: 0, filter: 'blur(10px)' }}
-          transition={{ duration: 0.4, ease: "easeInOut" }}
-          className="w-full h-full"
-        >
-          {renderView()}
-        </motion.div>
+    <>
+      <AnimatePresence>
+        {showIntro && <IntroSplash />}
       </AnimatePresence>
-    </AppShell>
+      
+      <AppShell 
+        currentView={currentView} 
+        setView={setView} 
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentView}
+            initial={{ opacity: 0, filter: 'blur(10px)' }}
+            animate={{ opacity: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, filter: 'blur(10px)' }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className="w-full h-full"
+          >
+            {renderView()}
+          </motion.div>
+        </AnimatePresence>
+      </AppShell>
+    </>
   );
 };
 
