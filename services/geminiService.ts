@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { Chapter, Book } from "../types";
 
@@ -11,17 +12,10 @@ const cleanJson = (text: string): string => {
 
 class GeminiService {
   
+  // FIX: Using process.env.API_KEY exclusively as per guidelines. 
+  // This also fixes the TypeScript error with import.meta.env.
   private getClient(): GoogleGenAI {
-    // FIX: Check process.env (Vercel/Node) and import.meta.env (Vite/Client) for VITE_GEMINI_API_KEY
-    const apiKey = process.env.VITE_GEMINI_API_KEY || 
-                   process.env.API_KEY || 
-                   (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : undefined);
-
-    if (!apiKey) {
-      console.error("Configuration Error: API Key is missing.");
-      throw new Error("AUTH_ERROR: API Key is missing. Please check VITE_GEMINI_API_KEY in your environment variables.");
-    }
-    return new GoogleGenAI({ apiKey });
+    return new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
 
   private async withRetry<T>(operation: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
@@ -75,7 +69,8 @@ class GeminiService {
   async generateBookStructure(title: string, genre: string, tone: string, audience: string, pacing: string, additionalPrompt: string): Promise<Partial<Book>> {
     return this.withRetry(async () => {
       const ai = this.getClient();
-      const model = "gemini-2.5-flash";
+      // FIX: Use gemini-3-pro-preview for complex structural tasks
+      const model = "gemini-3-pro-preview";
       
       const systemInstruction = this.getMasterAuthorPrompt(genre, tone);
 
@@ -161,6 +156,7 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
+        // gemini-2.5-flash-image is used by default for image generation
         const model = "gemini-2.5-flash-image";
         const g = genre.toLowerCase();
         const t = tone.toLowerCase();
@@ -237,6 +233,7 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
+        // gemini-2.5-flash-image is used by default for image generation
         const model = "gemini-2.5-flash-image";
         const settingSummary = book.chapters.map(c => c.summary).join(' ').substring(0, 1000);
 
@@ -274,6 +271,7 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
+        // gemini-2.5-flash-image is used by default for image generation
         const model = "gemini-2.5-flash-image";
         
         const prompt = `
@@ -316,7 +314,8 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
-        const model = "gemini-2.5-flash"; 
+        // FIX: Use gemini-3-pro-preview for complex writing tasks
+        const model = "gemini-3-pro-preview"; 
         
         const prompt = `
           You are writing the book "${bookTitle}".
@@ -361,7 +360,8 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
-        const model = "gemini-2.5-flash";
+        // FIX: Use gemini-3-pro-preview for complex editing tasks
+        const model = "gemini-3-pro-preview";
         const prompt = `
           You are an expert editor. 
           Rewrite the following text selection according to this instruction: "${instruction}".
@@ -390,7 +390,8 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
-        const model = "gemini-2.5-flash";
+        // FIX: Use gemini-3-pro-preview for advanced reasoning
+        const model = "gemini-3-pro-preview";
         const prompt = `
           You are the spirit of this book. Answer the reader's question based ONLY on the provided context.
           If the answer isn't in the text, answer in the persona of the book's narrator speculating plausibly.

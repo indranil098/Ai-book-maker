@@ -6,6 +6,8 @@ import { BookWizard } from './components/BookWizard';
 import { Editor } from './components/Editor';
 import { Reader } from './components/Reader';
 import { Library } from './components/Library';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { TermsOfService } from './components/TermsOfService';
 import { ViewState, Book } from './types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
@@ -163,7 +165,7 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (currentView) {
       case ViewState.LANDING:
-        return <Landing onStart={handleStart} />;
+        return <Landing onStart={handleStart} onNavigate={(view) => setView(view)} />;
       case ViewState.WIZARD:
         return <BookWizard onBookCreated={handleBookCreated} />;
       case ViewState.LIBRARY:
@@ -180,8 +182,12 @@ const App: React.FC = () => {
         return activeBook 
           ? <Reader book={activeBook} /> 
           : <div className="p-12 text-center text-stone-500 font-serif italic">No book selected to read.</div>;
+      case ViewState.PRIVACY:
+        return <PrivacyPolicy onBack={() => setView(ViewState.LANDING)} />;
+      case ViewState.TERMS:
+        return <TermsOfService onBack={() => setView(ViewState.LANDING)} />;
       default:
-        return <Landing onStart={handleStart} />;
+        return <Landing onStart={handleStart} onNavigate={(view) => setView(view)} />;
     }
   };
 

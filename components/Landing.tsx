@@ -2,9 +2,11 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Sparkles, PenTool, Globe, Fingerprint, Layers, Book } from 'lucide-react';
+import { ViewState } from '../types';
 
 interface LandingProps {
   onStart: () => void;
+  onNavigate: (view: ViewState) => void;
 }
 
 // --- MICRO COMPONENTS ---
@@ -103,7 +105,7 @@ const HeroVisual: React.FC = () => (
     </div>
 );
 
-const Footer: React.FC = () => (
+const Footer: React.FC<{ onNavigate: (view: ViewState) => void }> = ({ onNavigate }) => (
   <footer className="bg-stone-950 text-stone-400 py-24 border-t border-stone-900 relative overflow-hidden font-sans">
       {/* Background Decorative Mesh */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
@@ -120,7 +122,7 @@ const Footer: React.FC = () => (
               
               {/* Brand Column */}
               <div className="flex flex-col gap-6 items-center max-w-lg">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 cursor-pointer" onClick={() => onNavigate(ViewState.LANDING)}>
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 p-1.5 border border-white/10">
                         <img 
                             src="https://github.com/indranil122/image/blob/main/ChatGPT%20Image%20Dec%204,%202025,%2012_50_02%20AM-Photoroom.png?raw=true" 
@@ -140,8 +142,8 @@ const Footer: React.FC = () => (
           <div className="border-t border-stone-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-mono text-stone-600 uppercase tracking-wider relative z-20">
               <p>© {new Date().getFullYear()} Novelia Intelligence Inc.</p>
               <div className="flex gap-8">
-                  <a href="#" className="hover:text-stone-400">Privacy Policy</a>
-                  <a href="#" className="hover:text-stone-400">Terms of Service</a>
+                  <button onClick={() => onNavigate(ViewState.PRIVACY)} className="hover:text-stone-400 transition-colors">Privacy Policy</button>
+                  <button onClick={() => onNavigate(ViewState.TERMS)} className="hover:text-stone-400 transition-colors">Terms of Service</button>
               </div>
           </div>
       </div>
@@ -158,7 +160,7 @@ const Footer: React.FC = () => (
   </footer>
 );
 
-export const Landing: React.FC<LandingProps> = ({ onStart }) => {
+export const Landing: React.FC<LandingProps> = ({ onStart, onNavigate }) => {
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: containerRef });
   const y = useTransform(scrollYProgress, [0, 1], [0, -150]);
@@ -332,7 +334,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
       </section>
 
       {/* --- MODERN MINIMAL FOOTER --- */}
-      <Footer />
+      <Footer onNavigate={onNavigate} />
 
     </div>
   );

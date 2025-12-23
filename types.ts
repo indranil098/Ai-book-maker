@@ -7,6 +7,8 @@ export enum ViewState {
   LOGIN = 'LOGIN',
   SIGNUP = 'SIGNUP',
   LIBRARY = 'LIBRARY',
+  PRIVACY = 'PRIVACY',
+  TERMS = 'TERMS',
 }
 
 export interface User {
