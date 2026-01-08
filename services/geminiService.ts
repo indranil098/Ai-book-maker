@@ -13,10 +13,11 @@ const cleanJson = (text: string): string => {
 class GeminiService {
   
   private getClient(): GoogleGenAI {
-    if (!process.env.API_KEY) {
+    const apiKey = "AIzaSyAFn9ULvF0c076fnfAIOiUtZWL4pj9GQ7Y";
+    if (!apiKey) {
         throw new Error("API_KEY_MISSING: The Gemini API key is not configured in the environment.");
     }
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+    return new GoogleGenAI({ apiKey: apiKey });
   }
 
   private async withRetry<T>(operation: () => Promise<T>, retries = 2, delay = 2000): Promise<T> {
@@ -55,7 +56,7 @@ class GeminiService {
   private getMasterAuthorPrompt(genre: string, tone: string): string {
       return `
         You are an elite, award-winning, hyper-versatile master author.
-        Your task is to write content for a "${genre}" book with a "${tone}" tone.
+        Your task is to write content for a \"${genre}\" book with a \"${tone}\" tone.
         
         TRANSFORMATION RULES:
         - If Comedy/Humor: Use wit, situational irony, funny dialogue, and lighthearted descriptions.
@@ -77,7 +78,7 @@ class GeminiService {
       const systemInstruction = this.getMasterAuthorPrompt(genre, tone);
 
       const prompt = `
-        Create a complete book blueprint for a book titled "${title}".
+        Create a complete book blueprint for a book titled \"${title}\".
         Target Audience: ${audience}.
         Pacing Strategy: ${pacing}.
         Additional Context: ${additionalPrompt}.
@@ -164,10 +165,10 @@ class GeminiService {
         const model = "gemini-2.5-flash-image";
         
         const prompt = `
-          Professional book cover for "${title}". 
+          Professional book cover for \"${title}\". 
           Genre: ${genre}. Tone: ${tone}.
           Cinematic lighting, 8k resolution, award-winning digital art.
-          The title "${title}" should be elegantly integrated.
+          The title \"${title}\" should be elegantly integrated.
         `;
 
         const response = await ai.models.generateContent({
@@ -195,7 +196,7 @@ class GeminiService {
       const model = "gemini-3-flash-preview"; 
       
       const prompt = `
-        Write the full content for chapter: "${chapter.title}" of the book "${bookTitle}".
+        Write the full content for chapter: \"${chapter.title}\" of the book \"${bookTitle}\".
         
         Chapter Summary: ${chapter.summary}
         ${previousChapterSummary ? `Context from previous chapter: ${previousChapterSummary}` : ''}
@@ -226,7 +227,7 @@ class GeminiService {
   async rewriteText(selectedText: string, instruction: string, bookContext: string): Promise<string> {
     const ai = this.getClient();
     const model = "gemini-3-flash-preview";
-    const prompt = `Rewrite this text: "${selectedText}" based on: "${instruction}". Context: ${bookContext}. Return only the rewritten text.`;
+    const prompt = `Rewrite this text: \"${selectedText}\" based on: \"${instruction}\". Context: ${bookContext}. Return only the rewritten text.`;
     const response = await ai.models.generateContent({ model, contents: prompt });
     return response.text || selectedText;
   }
@@ -234,7 +235,7 @@ class GeminiService {
   async askBook(question: string, currentChapterContent: string, bookSummary: string): Promise<string> {
     const ai = this.getClient();
     const model = "gemini-3-flash-preview";
-    const prompt = `Answer this: "${question}". Context: ${bookSummary}. Chapter: ${currentChapterContent.substring(0, 2000)}`;
+    const prompt = `Answer this: \"${question}\". Context: ${bookSummary}. Chapter: ${currentChapterContent.substring(0, 2000)}`;
     const response = await ai.models.generateContent({ model, contents: prompt });
     return response.text || "I am lost for words...";
   }
