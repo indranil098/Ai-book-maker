@@ -13,7 +13,6 @@ const cleanJson = (text: string): string => {
 class GeminiService {
   
   // FIX: Using process.env.API_KEY exclusively as per guidelines. 
-  // This also fixes the TypeScript error with import.meta.env.
   private getClient(): GoogleGenAI {
     return new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
@@ -69,8 +68,8 @@ class GeminiService {
   async generateBookStructure(title: string, genre: string, tone: string, audience: string, pacing: string, additionalPrompt: string): Promise<Partial<Book>> {
     return this.withRetry(async () => {
       const ai = this.getClient();
-      // FIX: Use gemini-3-pro-preview for complex structural tasks
-      const model = "gemini-3-pro-preview";
+      // UPDATED: Using gemini-3-flash-preview as requested
+      const model = "gemini-3-flash-preview";
       
       const systemInstruction = this.getMasterAuthorPrompt(genre, tone);
 
@@ -156,7 +155,6 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
-        // gemini-2.5-flash-image is used by default for image generation
         const model = "gemini-2.5-flash-image";
         const g = genre.toLowerCase();
         const t = tone.toLowerCase();
@@ -233,7 +231,6 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
-        // gemini-2.5-flash-image is used by default for image generation
         const model = "gemini-2.5-flash-image";
         const settingSummary = book.chapters.map(c => c.summary).join(' ').substring(0, 1000);
 
@@ -271,7 +268,6 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
-        // gemini-2.5-flash-image is used by default for image generation
         const model = "gemini-2.5-flash-image";
         
         const prompt = `
@@ -314,8 +310,8 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
-        // FIX: Use gemini-3-pro-preview for complex writing tasks
-        const model = "gemini-3-pro-preview"; 
+        // UPDATED: Using gemini-3-flash-preview as requested
+        const model = "gemini-3-flash-preview"; 
         
         const prompt = `
           You are writing the book "${bookTitle}".
@@ -360,8 +356,8 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
-        // FIX: Use gemini-3-pro-preview for complex editing tasks
-        const model = "gemini-3-pro-preview";
+        // UPDATED: Using gemini-3-flash-preview as requested
+        const model = "gemini-3-flash-preview";
         const prompt = `
           You are an expert editor. 
           Rewrite the following text selection according to this instruction: "${instruction}".
@@ -390,8 +386,8 @@ class GeminiService {
     try {
       return await this.withRetry(async () => {
         const ai = this.getClient();
-        // FIX: Use gemini-3-pro-preview for advanced reasoning
-        const model = "gemini-3-pro-preview";
+        // UPDATED: Using gemini-3-flash-preview as requested
+        const model = "gemini-3-flash-preview";
         const prompt = `
           You are the spirit of this book. Answer the reader's question based ONLY on the provided context.
           If the answer isn't in the text, answer in the persona of the book's narrator speculating plausibly.
