@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Wand2, ChevronRight, Book, Feather, Palette, Type as TypeIcon } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Wand2, ChevronRight, Book, Feather, Palette, Type as TypeIcon, AlertCircle, RefreshCcw } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
 import { Book as BookType, GenerationParams, Chapter } from '../types';
 
@@ -16,6 +17,7 @@ const PACING = ["Steady & Balanced", "Fast-paced", "Slow Burn"];
 export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
   const [step, setStep] = useState(1);
   const [status, setStatus] = useState<'idle' | 'generating' | 'complete' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [progressStep, setProgressStep] = useState<string>('');
   const [progressPercent, setProgressPercent] = useState(0);
   const [liveCover, setLiveCover] = useState<string | null>(null);
@@ -37,27 +39,36 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
 
   const handleGenerate = async () => {
     setStatus('generating');
+    setErrorMessage(null);
     setProgressStep('Conjuring visual essence...');
     setProgressPercent(5);
 
     try {
+      // Step 1: Cover (Non-blocking)
       const coverPromise = geminiService.generateBookCover(formData.title, formData.genre, formData.tone)
         .then(url => { if(url) setLiveCover(url); return url; });
 
+      // Step 2: Structure (Blocking)
+      setProgressStep('Architecting the narrative structure...');
       const partialBook = await geminiService.generateBookStructure(
         formData.title, formData.genre, formData.tone, formData.audience, formData.pacing, formData.prompt
       );
 
+      // Step 3: Chapters (Iterative)
       const fullyWrittenChapters: Chapter[] = [];
-      const totalChapters = partialBook.chapters?.length || 0;
+      const chaptersToGenerate = partialBook.chapters || [];
+      const totalChapters = chaptersToGenerate.length;
+
+      if (totalChapters === 0) throw new Error("The AI failed to create a book outline. Please try again with a different title.");
 
       for (let i = 0; i < totalChapters; i++) {
-        const ch = partialBook.chapters![i];
-        setProgressPercent(20 + Math.floor((i / totalChapters) * 70));
+        const ch = chaptersToGenerate[i];
+        setProgressPercent(20 + Math.floor((i / totalChapters) * 75));
         setProgressStep(`Weaving Chapter ${i + 1}: ${ch.title}`);
         
         const content = await geminiService.generateChapterContent(
-          formData.title, ch, formData.writingStyle, formData.perspective
+          formData.title, ch, formData.writingStyle, formData.perspective, 
+          i > 0 ? fullyWrittenChapters[i-1].summary : undefined
         );
 
         fullyWrittenChapters.push({ ...ch, content, isGenerated: true });
@@ -82,16 +93,11 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
 
       setGeneratedBook(newBook);
       setStatus('complete');
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("Generation error:", e);
+      setErrorMessage(e.message || "An unknown error occurred during the materialization ritual.");
       setStatus('error');
     }
-  };
-
-  const stepVariants = {
-    initial: { opacity: 0, x: 20 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -20 }
   };
 
   if (status === 'generating') {
@@ -109,13 +115,37 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
               )}
            </div>
            <div className="text-center space-y-4">
-              <h2 className="font-serif text-3xl font-bold dark:text-white">{progressStep}</h2>
+              <h2 className="font-serif text-2xl md:text-3xl font-bold dark:text-white transition-all">{progressStep}</h2>
               <div className="h-1.5 w-full bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
-                <motion.div animate={{ width: `${progressPercent}%` }} className="h-full bg-saffron-500" />
+                <motion.div initial={{ width: 0 }} animate={{ width: `${progressPercent}%` }} className="h-full bg-saffron-500" />
               </div>
-              <p className="text-xs font-mono text-stone-400 uppercase tracking-widest">{progressPercent}% Narrative Sync</p>
+              <p className="text-xs font-mono text-stone-400 uppercase tracking-widest">{progressPercent}% Synchronized</p>
            </div>
         </div>
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] px-6">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white/70 dark:bg-stone-900/70 backdrop-blur-2xl p-10 md:p-16 rounded-[3rem] border border-red-100 dark:border-red-900/20 shadow-2xl text-center max-w-xl">
+           <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mx-auto mb-8">
+              <AlertCircle size={40} />
+           </div>
+           <h2 className="font-serif text-3xl font-bold mb-4 dark:text-white">Materialization Interrupted</h2>
+           <p className="text-stone-500 dark:text-stone-400 mb-8 leading-relaxed">
+             {errorMessage || "The neural engine encountered an unexpected void in the creative stream."}
+           </p>
+           <div className="flex flex-col md:flex-row gap-4 justify-center">
+              <button onClick={() => setStatus('idle')} className="px-8 py-3 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-xl font-bold hover:bg-stone-200 transition-all">
+                Adjust Parameters
+              </button>
+              <button onClick={handleGenerate} className="px-8 py-3 bg-saffron-500 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 hover:bg-saffron-600 transition-all">
+                <RefreshCcw size={18} /> Retry Ritual
+              </button>
+           </div>
+        </motion.div>
       </div>
     );
   }
@@ -137,9 +167,14 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
     );
   }
 
+  const stepVariants = {
+    initial: { opacity: 0, x: 20 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -20 }
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-12 px-6">
-      {/* Progress Dots */}
       <div className="flex justify-center gap-3 mb-12">
         {[1, 2, 3, 4].map(i => (
           <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${step === i ? 'w-8 bg-saffron-500' : 'w-2 bg-stone-200 dark:bg-stone-800'}`} />
@@ -264,7 +299,6 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
             </div>
           )}
 
-          {/* Navigation */}
           <div className="mt-16 flex justify-between items-center">
             {step > 1 ? (
               <button onClick={prevStep} className="flex items-center gap-2 text-stone-400 hover:text-stone-900 dark:hover:text-white font-bold transition-colors">

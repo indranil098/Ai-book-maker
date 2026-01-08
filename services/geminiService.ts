@@ -12,35 +12,44 @@ const cleanJson = (text: string): string => {
 
 class GeminiService {
   
-  // FIX: Using process.env.API_KEY exclusively as per guidelines. 
   private getClient(): GoogleGenAI {
+    if (!process.env.API_KEY) {
+        throw new Error("API_KEY_MISSING: The Gemini API key is not configured in the environment.");
+    }
     return new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
 
-  private async withRetry<T>(operation: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
+  private async withRetry<T>(operation: () => Promise<T>, retries = 2, delay = 2000): Promise<T> {
     let lastError: any;
     
-    for (let i = 0; i < retries; i++) {
+    for (let i = 0; i < retries + 1; i++) {
       try {
         return await operation();
       } catch (error: any) {
         lastError = error;
-        console.warn(`Attempt ${i + 1} failed:`, error);
+        console.error(`Gemini API Attempt ${i + 1} failed:`, error);
         
         const msg = error.toString().toLowerCase();
-        if (msg.includes("api_key") || msg.includes("auth")) {
-          throw new Error("AUTH_ERROR: API Key is invalid or not configured correctly.");
+        
+        // Don't retry on Auth or Safety errors as they are terminal for that specific prompt
+        if (msg.includes("api_key") || msg.includes("auth") || msg.includes("401") || msg.includes("403")) {
+          throw new Error("AUTHENTICATION_ERROR: Your API key is invalid or lacks permissions.");
         }
-        if (msg.includes("quota") || msg.includes("429")) {
-          throw new Error("QUOTA_EXCEEDED");
+        
+        if (msg.includes("safety") || msg.includes("blocked")) {
+          throw new Error("CONTENT_SAFETY_ERROR: The prompt or generated content was flagged by safety filters.");
         }
 
-        if (i < retries - 1) {
+        if (msg.includes("quota") || msg.includes("429")) {
+          if (i === retries) throw new Error("QUOTA_EXCEEDED: You've reached the Gemini API rate limit. Please wait a minute.");
+        }
+
+        if (i < retries) {
           await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
         }
       }
     }
-    throw lastError;
+    throw new Error(lastError?.message || "An unexpected error occurred during AI generation.");
   }
 
   private getMasterAuthorPrompt(genre: string, tone: string): string {
@@ -49,41 +58,37 @@ class GeminiService {
         Your task is to write content for a "${genre}" book with a "${tone}" tone.
         
         TRANSFORMATION RULES:
-        - If Comedy/Humor: Use wit, situational irony, funny dialogue, and lighthearted descriptions. Make the reader laugh.
-        - If Dark Romance: Use seductive, intoxicating, erotic (implied), exotic, sensorial language. Deep emotional tension.
-        - If Mythology/Eldritch Horror: Adopt a divine or terrifying, ancient, reverent tone. Use poetic metaphors. Unspeakable dread.
-        - If Thriller/True Crime: Use tight pacing, sharp sentences, suspense, dread, cinematic action.
-        - If Fantasy/Sci-Fi: Lush world-building, magic systems or tech details (as appropriate), immersive geography.
-        - If Non-fiction/Self-Help: Professional, structured, factual, clear, inspiring, actionable.
-        - If Western: Gritty, dusty, laconic, wide landscapes, tension.
+        - If Comedy/Humor: Use wit, situational irony, funny dialogue, and lighthearted descriptions.
+        - If Dark Romance: Use seductive, intoxicating, sensorial language. Deep emotional tension.
+        - If Mythology/Eldritch Horror: Adopt a divine or terrifying, ancient, reverent tone.
+        - If Thriller/True Crime: Use tight pacing, sharp sentences, suspense.
         
         WRITING STANDARDS:
         - Show, don't tell.
         - Strong hooks and vivid sensory details.
-        - Cinematic pacing.
-        - No clichés unless genre-appropriate (like in Comedy).
       `;
   }
 
   async generateBookStructure(title: string, genre: string, tone: string, audience: string, pacing: string, additionalPrompt: string): Promise<Partial<Book>> {
     return this.withRetry(async () => {
       const ai = this.getClient();
-      // UPDATED: Using gemini-3-flash-preview as requested
       const model = "gemini-3-flash-preview";
       
       const systemInstruction = this.getMasterAuthorPrompt(genre, tone);
 
       const prompt = `
-        Create a complete, publish-worthy book blueprint for a book titled "${title}".
+        Create a complete book blueprint for a book titled "${title}".
         Target Audience: ${audience}.
         Pacing Strategy: ${pacing}.
         Additional Context: ${additionalPrompt}.
         
         Generate a JSON response with:
-        1. The book title (feel free to improve it).
-        2. A creative author name.
-        3. A list of 8-12 chapters. Each chapter must have a title and a compelling plot summary (2-3 sentences). ensure the chapter flow matches the requested pacing (${pacing}).
-        4. A list of 3-5 main characters. Each character must have a name, role (e.g., Protagonist, Antagonist), and a brief description.
+        1. title (string)
+        2. author (string)
+        3. chapters (array of objects with 'title' and 'summary')
+        4. characters (array of objects with 'name', 'role', 'description')
+        
+        Generate exactly 8 chapters.
       `;
 
       const response = await ai.models.generateContent({
@@ -126,12 +131,13 @@ class GeminiService {
         },
       });
 
-      const text = response.text || "{}";
+      const text = response.text;
+      if (!text) throw new Error("EMPTY_RESPONSE: The model returned an empty response.");
       
       const data = JSON.parse(cleanJson(text));
       
       if (!data.chapters || !Array.isArray(data.chapters)) {
-        throw new Error("Invalid book structure generated");
+        throw new Error("INVALID_STRUCTURE: The AI failed to generate a valid chapter list.");
       }
       
       const chapters: Chapter[] = data.chapters.map((c: any, index: number) => ({
@@ -156,56 +162,12 @@ class GeminiService {
       return await this.withRetry(async () => {
         const ai = this.getClient();
         const model = "gemini-2.5-flash-image";
-        const g = genre.toLowerCase();
-        const t = tone.toLowerCase();
-        
-        let artDirection = "Highly contrasting, cinematic lighting, 8k resolution, award-winning digital art.";
-        let typographyStyle = "Bold, readable, metallic typography.";
-
-        if (g.includes('comedy') || t.includes('funny') || t.includes('humor') || t.includes('witty') || t.includes('lighthearted')) {
-             artDirection = "Playful, vibrant, illustrated style cover. Bright colors like yellow, teal, or hot pink. Quirky, bold composition. Cartoon-style or vector art. Funny or ironic visual elements.";
-             typographyStyle = "Bold, bubbly, or handwritten sans-serif font. Fun and approachable. Title '${title}' MUST be the focal point.";
-        }
-        else if (g.includes('romance') || t.includes('romantic')) {
-             if (t.includes('dark') || g.includes('dark')) {
-                artDirection = "Gothic Baroque masterpiece. Deep obsidian shadows vs piercing ruby red highlights. A single symbolic object (a key, a mask, a rose). Dramatic lighting.";
-                typographyStyle = "Elegant, sharp serif font in Silver or Gold leaf.";
-             } else {
-                artDirection = "Soft, dreamy, pastel colors. Illustrated couple or symbolic romantic objects (flowers, letters). Warm lighting, watercolor or soft digital art style.";
-                typographyStyle = "Flowing, elegant script font.";
-             }
-        } 
-        else if (g.includes('sci') || g.includes('cyberpunk') || g.includes('space')) {
-            artDirection = "Neon Noir Cyberpunk or Space Opera. Deep midnight blues vs blinding neon pinks and cyans. Hyper-detailed, futuristic cityscapes or nebulas. High-tech feel.";
-            typographyStyle = "Futuristic, glitch-effect sans-serif font in glowing Neon.";
-        }
-        else if (g.includes('fantasy') || g.includes('magic')) {
-           artDirection = "Ethereal High Fantasy in the style of John Howe. Deep ancient forest greens vs glowing golden magic. Oil painting texture. Epic scale.";
-           typographyStyle = "Ornate, hand-lettered gold calligraphy with a subtle glow.";
-        }
-        else if (g.includes('horror') || g.includes('eldritch')) {
-          artDirection = "Cosmic Horror or classic scary. Deep shadows, unsettling composition. Sickly greens or blood reds. Surreal and terrifying.";
-          typographyStyle = "Jagged, hand-scratched or bleeding font.";
-        }
-        else if (g.includes('thriller') || g.includes('mystery') || g.includes('crime')) {
-          artDirection = "Psychological Thriller cover. High Contrast Black and White with a single splash of Red. Double exposure photography, silhouettes in fog. Cinematic suspense.";
-          typographyStyle = "Bold, distressed, condensed sans-serif font. Huge and imposing.";
-        }
-        else if (g.includes('western')) {
-          artDirection = "Vintage Western poster style. Sunset orange and dusty brown palette. Silhouettes of cowboys, wide desert landscapes.";
-          typographyStyle = "Vintage woodblock Western font.";
-        }
-        else if (g.includes('self-help') || g.includes('non-fiction')) {
-          artDirection = "Clean, minimalist, Swiss design. Abstract geometric shapes or a single powerful metaphoric object. Lots of negative space. Calming colors.";
-          typographyStyle = "Clean, modern Helvetica or geometric sans-serif.";
-        }
         
         const prompt = `
-          Design a professional, publishable, best-selling book cover for: "${title}".
+          Professional book cover for "${title}". 
           Genre: ${genre}. Tone: ${tone}.
-          VISUAL STYLE: ${artDirection}
-          TYPOGRAPHY: The title "${title}" MUST be written prominently on the cover. Use this style: ${typographyStyle}
-          COMPOSITION: Vertical aspect ratio (3:4). Clean, professional layout.
+          Cinematic lighting, 8k resolution, award-winning digital art.
+          The title "${title}" should be elegantly integrated.
         `;
 
         const response = await ai.models.generateContent({
@@ -222,217 +184,78 @@ class GeminiService {
         return undefined;
       });
     } catch (error) {
-      console.error("Cover generation failed:", error);
-      return undefined;
-    }
-  }
-  
-  async generateWorldMap(book: Book): Promise<string | undefined> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        const model = "gemini-2.5-flash-image";
-        const settingSummary = book.chapters.map(c => c.summary).join(' ').substring(0, 1000);
-
-        const prompt = `
-          Create a detailed world map for a ${book.genre} book titled "${book.title}".
-          The world is described as having a ${book.tone} tone. 
-          Key elements from the story include: ${settingSummary}.
-          
-          STYLE: Generate a beautiful, hand-drawn map in a vintage parchment or epic fantasy style. 
-          Include geographical features like mountains, forests, rivers, and cities that fit the genre.
-          Do NOT include any text or labels on the map. The map should be purely visual.
-          ASPECT RATIO: 16:9, landscape.
-        `;
-        
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: { parts: [{ text: prompt }] },
-          config: { imageConfig: { aspectRatio: "16:9" } }
-        });
-
-        for (const part of response.candidates?.[0]?.content?.parts || []) {
-           if (part.inlineData && part.inlineData.mimeType.startsWith('image')) {
-              return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-           }
-        }
-        return undefined;
-      });
-    } catch (error) {
-      console.error("World map generation failed:", error);
+      console.error("Cover generation failed, but continuing with book text:", error);
       return undefined;
     }
   }
 
-  async generateIllustration(sceneDescription: string, genre: string): Promise<string | undefined> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        const model = "gemini-2.5-flash-image";
+  async generateChapterContent(bookTitle: string, chapter: Chapter, style: string, perspective: string, previousChapterSummary?: string): Promise<string> {
+    return this.withRetry(async () => {
+      const ai = this.getClient();
+      const model = "gemini-3-flash-preview"; 
+      
+      const prompt = `
+        Write the full content for chapter: "${chapter.title}" of the book "${bookTitle}".
         
-        const prompt = `
-          Create a stunning, high-contrast cinematic illustration for a ${genre} story.
-          Scene Description: ${sceneDescription}
-          
-          STYLE: Cinematic, highly detailed, dramatic lighting, 8k resolution. 
-          Use rich, deep colors and strong contrast. Make it look like a movie still or concept art.
-          No text on the image.
-        `;
+        Chapter Summary: ${chapter.summary}
+        ${previousChapterSummary ? `Context from previous chapter: ${previousChapterSummary}` : ''}
+        
+        Writing Style: ${style}
+        Narrative Perspective: ${perspective}
+        
+        Requirements:
+        - Approx 800 words.
+        - Immersive, sensory details.
+        - Use Markdown for emphasis.
+        - Start directly with the prose.
+      `;
 
-        const response = await ai.models.generateContent({
+      const response = await ai.models.generateContent({
           model: model,
-          contents: {
-            parts: [{ text: prompt }]
-          },
-          config: {
-            imageConfig: {
-              aspectRatio: "16:9"
-            }
-          }
-        });
-
-        if (response.candidates?.[0]?.content?.parts) {
-          for (const part of response.candidates[0].content.parts) {
-             if (part.inlineData && part.inlineData.mimeType.startsWith('image')) {
-                return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-             }
-          }
-        }
-        return undefined;
+          contents: prompt,
       });
-    } catch (error) {
-       console.error("Illustration failed:", error);
-       return undefined;
-    }
-  }
 
-  async generateChapterContent(bookTitle: string, chapter: Chapter, style: string = "Cinematic", perspective: string = "Third Person Limited", previousChapterSummary?: string): Promise<string> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        // UPDATED: Using gemini-3-flash-preview as requested
-        const model = "gemini-3-flash-preview"; 
-        
-        const prompt = `
-          You are writing the book "${bookTitle}".
-          Write the full content for the chapter: "${chapter.title}".
-          
-          Chapter Summary: ${chapter.summary}
-          ${previousChapterSummary ? `Previous context: ${previousChapterSummary}` : ''}
-          
-          STRICT CONSTRAINTS:
-          - Writing Style: ${style}
-          - Narrative Perspective: ${perspective}
-          
-          INSTRUCTIONS:
-          - Write approx 800-1200 words.
-          - Use immersive, sensory details.
-          - Maintain pacing appropriate for the style (${style}).
-          - Focus on "Show, don't tell".
-          - Format with Markdown (bold, italics).
-          - Do NOT include the chapter title at the start. Start directly with the story.
-        `;
-
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: prompt,
-        });
-
-        const text = response.text;
-        
-        if (text && text.trim().length > 300) {
-            return text;
-        } else {
-            throw new Error("Content generated was too short or empty.");
-        }
-      });
-    } catch (error) {
-       console.error("Chapter generation failed:", error);
-       throw error;
-    }
+      const text = response.text;
+      if (!text || text.trim().length < 100) {
+          throw new Error("CONTENT_SHORT: Generated content was unexpectedly short.");
+      }
+      return text;
+    });
   }
 
   async rewriteText(selectedText: string, instruction: string, bookContext: string): Promise<string> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        // UPDATED: Using gemini-3-flash-preview as requested
-        const model = "gemini-3-flash-preview";
-        const prompt = `
-          You are an expert editor. 
-          Rewrite the following text selection according to this instruction: "${instruction}".
-          
-          Context of the book: ${bookContext}
-          
-          Original Text: "${selectedText}"
-          
-          Return ONLY the rewritten text. Do not add quotes or conversational filler.
-        `;
-
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: prompt,
-        });
-
-        return response.text || selectedText;
-      });
-    } catch (error) {
-      console.error("Rewrite failed:", error);
-      throw error;
-    }
+    const ai = this.getClient();
+    const model = "gemini-3-flash-preview";
+    const prompt = `Rewrite this text: "${selectedText}" based on: "${instruction}". Context: ${bookContext}. Return only the rewritten text.`;
+    const response = await ai.models.generateContent({ model, contents: prompt });
+    return response.text || selectedText;
   }
 
   async askBook(question: string, currentChapterContent: string, bookSummary: string): Promise<string> {
-    try {
-      return await this.withRetry(async () => {
-        const ai = this.getClient();
-        // UPDATED: Using gemini-3-flash-preview as requested
-        const model = "gemini-3-flash-preview";
-        const prompt = `
-          You are the spirit of this book. Answer the reader's question based ONLY on the provided context.
-          If the answer isn't in the text, answer in the persona of the book's narrator speculating plausibly.
-          
-          Book Context: ${bookSummary}
-          Current Chapter Text: ${currentChapterContent.substring(0, 5000)}... (truncated)
-          
-          Reader Question: ${question}
-        `;
-
-        const response = await ai.models.generateContent({
-          model: model,
-          contents: prompt,
-        });
-
-        return response.text || "I am lost for words...";
-      });
-    } catch (error) {
-      return "I couldn't connect to the spirit world (API Error).";
-    }
+    const ai = this.getClient();
+    const model = "gemini-3-flash-preview";
+    const prompt = `Answer this: "${question}". Context: ${bookSummary}. Chapter: ${currentChapterContent.substring(0, 2000)}`;
+    const response = await ai.models.generateContent({ model, contents: prompt });
+    return response.text || "I am lost for words...";
   }
 
   async generateSpeech(text: string, voiceName: string): Promise<string | undefined> {
-    try {
-        return await this.withRetry(async () => {
-            const ai = this.getClient();
-            const response = await ai.models.generateContent({
-                model: "gemini-2.5-flash-preview-tts",
-                contents: [{ parts: [{ text: text }] }],
-                config: {
-                    responseModalities: [Modality.AUDIO],
-                    speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName: voiceName },
-                        },
+    return this.withRetry(async () => {
+        const ai = this.getClient();
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash-preview-tts",
+            contents: [{ parts: [{ text: text }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: voiceName },
                     },
                 },
-            });
-            
-            return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+            },
         });
-    } catch (error) {
-        console.error("TTS generation failed:", error);
-        throw error;
-    }
+        return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    });
   }
 }
 
