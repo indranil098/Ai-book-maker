@@ -13,7 +13,7 @@ const cleanJson = (text: string): string => {
 class GeminiService {
   
   private getClient(): GoogleGenAI {
-    const apiKey = "AIzaSyAFn9ULvF0c076fnfAIOiUtZWL4pj9GQ7Y";
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
         throw new Error("API_KEY_MISSING: The Gemini API key is not configured in the environment.");
     }
