@@ -1,50 +1,43 @@
-
+import { auth, googleProvider } from '../firebase';
+import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { User } from '../types';
 
 export const authService = {
-  login: async (email: string, password: string): Promise<User> => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Mock validation
-    if (!email || !password) {
-      throw new Error('Please provide both email and password.');
-    }
-
-    // Simulate successful login
-    return {
-      id: 'user-' + Date.now(),
-      name: email.split('@')[0], // Use part of email as name
-      email: email,
-      avatar: `https://ui-avatars.com/api/?name=${email.split('@')[0]}&background=random`
-    };
-  },
-
   loginWithGoogle: async (): Promise<User> => {
-    // Simulate OAuth popup delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    return {
-      id: 'google-user-' + Date.now(),
-      name: 'Google User',
-      email: 'user@gmail.com',
-      avatar: 'https://lh3.googleusercontent.com/a/default-user=s96-c' // Generic Google-like avatar
-    };
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      return {
+        id: user.uid,
+        name: user.displayName || 'Author',
+        email: user.email || '',
+        avatar: user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=random`
+      };
+    } catch (error: any) {
+      console.error("Firebase Login Error:", error);
+      throw new Error(error.message || "Failed to sign in with Google");
+    }
   },
 
-  signup: async (name: string, email: string, password: string): Promise<User> => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+  logout: async () => {
+    await signOut(auth);
+  },
 
-    if (!name || !email || !password) {
-      throw new Error('All fields are required.');
-    }
-
-    return {
-      id: 'user-' + Date.now(),
-      name: name,
-      email: email,
-      avatar: `https://ui-avatars.com/api/?name=${name}&background=random`
-    };
+  getCurrentUser: (): Promise<User | null> => {
+    return new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
+        unsubscribe();
+        if (user) {
+          resolve({
+            id: user.uid,
+            name: user.displayName || 'Author',
+            email: user.email || '',
+            avatar: user.photoURL || ''
+          });
+        } else {
+          resolve(null);
+        }
+      });
+    });
   }
 };

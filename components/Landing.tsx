@@ -1,7 +1,7 @@
 
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { ArrowRight, Sparkles, PenTool, Globe, Fingerprint, Layers, Book } from 'lucide-react';
+import { ArrowRight, Sparkles, PenTool, Globe, Layers, Twitter, Github, MessageSquare } from 'lucide-react';
 import { ViewState } from '../types';
 
 interface LandingProps {
@@ -53,6 +53,70 @@ const HeroVisual: React.FC = () => (
     </div>
 );
 
+const Footer: React.FC<{ onNavigate: (view: ViewState) => void }> = ({ onNavigate }) => (
+  <footer className="bg-stone-950 text-stone-400 pt-24 pb-12 px-6 relative overflow-hidden border-t border-stone-900">
+      {/* Background Typography Watermark */}
+      <div className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-full text-center pointer-events-none select-none overflow-hidden opacity-[0.03]">
+          <h1 className="text-[15rem] md:text-[25rem] font-serif font-black text-white leading-none tracking-tighter">
+              NOVELIA
+          </h1>
+      </div>
+
+      <div className="max-w-7xl mx-auto relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-24">
+              
+              {/* Column 1: Brand & Purpose */}
+              <div className="flex flex-col gap-6">
+                  <div className="flex items-center gap-3 cursor-pointer" onClick={() => onNavigate(ViewState.LANDING)}>
+                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/5 p-2 border border-white/10">
+                        <img 
+                            src="https://github.com/indranil122/image/blob/main/ChatGPT%20Image%20Dec%204,%202025,%2012_50_02%20AM-Photoroom.png?raw=true" 
+                            alt="Logo" 
+                            className="w-full h-full object-contain" 
+                        />
+                      </div>
+                      <span className="font-serif font-bold text-2xl text-stone-100">Novelia<span className="text-saffron-500">.</span></span>
+                  </div>
+                  <p className="text-stone-500 text-sm leading-relaxed pr-4 max-w-md">
+                      Redefining the relationship between author and intelligence. We build the tools for the next golden age of literature.
+                  </p>
+                  <div className="flex gap-4">
+                      <a href="#" className="p-2 bg-stone-900 rounded-lg hover:text-saffron-400 transition-colors"><Twitter size={18} /></a>
+                      <a href="#" className="p-2 bg-stone-900 rounded-lg hover:text-saffron-400 transition-colors"><Github size={18} /></a>
+                      <a href="#" className="p-2 bg-stone-900 rounded-lg hover:text-saffron-400 transition-colors"><MessageSquare size={18} /></a>
+                  </div>
+              </div>
+
+              {/* Column 2: Studio Actions */}
+              <div className="flex flex-col md:items-end gap-6 justify-center">
+                  <h4 className="text-stone-200 font-mono text-xs uppercase tracking-[0.2em] font-bold">Studio Access</h4>
+                  <button onClick={() => onNavigate(ViewState.WIZARD)} className="flex items-center gap-2 text-xl font-serif font-bold text-white hover:text-saffron-400 transition-colors group">
+                     Enter Our Studio 
+                     <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+              </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="pt-12 border-t border-stone-900 flex flex-col md:flex-row justify-between items-center gap-6">
+              <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-stone-600">
+                      © {new Date().getFullYear()} Novelia Intelligence Inc.
+                  </p>
+                  <div className="flex gap-6">
+                      <button onClick={() => onNavigate(ViewState.PRIVACY)} className="text-[10px] font-mono uppercase tracking-widest hover:text-stone-100 transition-colors">Privacy</button>
+                      <button onClick={() => onNavigate(ViewState.TERMS)} className="text-[10px] font-mono uppercase tracking-widest hover:text-stone-100 transition-colors">Terms</button>
+                  </div>
+              </div>
+              <div className="flex items-center gap-2 text-stone-700">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                  <span className="text-[10px] font-mono uppercase tracking-widest">Neural Systems Online</span>
+              </div>
+          </div>
+      </div>
+  </footer>
+);
+
 export const Landing: React.FC<LandingProps> = ({ onStart, onNavigate }) => {
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: containerRef });
@@ -61,6 +125,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onNavigate }) => {
   return (
     <div ref={containerRef} className="w-full min-h-screen overflow-x-hidden selection:bg-saffron-500 selection:text-white bg-ivory dark:bg-stone-950">
       
+      {/* --- HERO SECTION --- */}
       <section className="relative min-h-[90vh] md:min-h-screen flex flex-col justify-center px-6 pt-24 md:pt-0 overflow-hidden">
          <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center relative z-10">
              
@@ -80,7 +145,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onNavigate }) => {
                     </p>
 
                     <div className="flex pt-4 md:pt-8">
-                        <button onClick={onStart} className="w-full md:w-auto px-10 py-5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 font-bold text-sm tracking-widest uppercase rounded-full hover:bg-saffron-500 hover:text-white transition-all flex items-center justify-center gap-4 group">
+                        <button onClick={onStart} className="w-full md:w-auto px-10 py-5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 font-bold text-sm tracking-widest uppercase rounded-full hover:bg-saffron-500 hover:text-white transition-all flex items-center justify-center gap-4 group shadow-xl">
                             <span>Initialize Studio</span>
                             <ArrowRight className="group-hover:translate-x-1 transition-transform" />
                         </button>
@@ -99,15 +164,16 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onNavigate }) => {
 
       <ScrollTicker />
 
-      {/* Feature Grid with Vertical Stacking on Mobile */}
+      {/* --- FEATURE GRID --- */}
       <section className="py-20 md:py-40 px-6">
           <div className="max-w-7xl mx-auto">
               <div className="mb-12 md:mb-24 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-stone-200 dark:border-stone-800 pb-8">
                   <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 dark:text-white leading-none">
                       The Architecture
                   </h2>
-                  <p className="text-stone-400 text-[10px] font-mono tracking-widest uppercase">
-                      // Optimized for Creativity
+                  <p className="text-stone-400 text-[10px] font-mono tracking-widest uppercase text-right">
+                      // Optimized for Creativity <br/>
+                      Core Creative Modules
                   </p>
               </div>
 
@@ -120,7 +186,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onNavigate }) => {
                     <motion.div 
                         key={i}
                         whileHover={{ y: -5 }}
-                        className={`p-8 md:p-10 border rounded-2xl transition-all ${feat.dark ? 'bg-stone-900 text-white border-stone-800' : 'bg-white/50 dark:bg-stone-900/50 border-stone-200 dark:border-stone-800'}`}
+                        className={`p-8 md:p-10 border rounded-2xl transition-all shadow-sm hover:shadow-xl ${feat.dark ? 'bg-stone-900 text-white border-stone-800' : 'bg-white/50 dark:bg-stone-900/50 border-stone-200 dark:border-stone-800'}`}
                     >
                         <feat.icon className={`w-10 h-10 mb-6 stroke-1 ${feat.dark ? 'text-saffron-400' : 'text-stone-900 dark:text-white'}`} />
                         <h3 className="text-2xl font-serif font-bold mb-3">{feat.title}</h3>
@@ -131,18 +197,8 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onNavigate }) => {
           </div>
       </section>
 
-      <footer className="bg-stone-950 text-stone-400 py-16 px-6 border-t border-stone-900 text-center">
-          <div className="max-w-7xl mx-auto flex flex-col items-center gap-8">
-              <div className="flex items-center gap-2">
-                  <span className="font-serif font-bold text-2xl text-stone-200">Novelia.</span>
-              </div>
-              <div className="flex flex-wrap justify-center gap-6 text-xs uppercase tracking-widest font-mono">
-                  <button onClick={() => onNavigate(ViewState.PRIVACY)} className="hover:text-stone-200">Privacy</button>
-                  <button onClick={() => onNavigate(ViewState.TERMS)} className="hover:text-stone-200">Terms</button>
-              </div>
-              <p className="text-[10px] opacity-50">© {new Date().getFullYear()} Novelia Intelligence Inc.</p>
-          </div>
-      </footer>
+      {/* --- REIMAGINED FOOTER --- */}
+      <Footer onNavigate={onNavigate} />
     </div>
   );
 };

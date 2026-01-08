@@ -1,7 +1,6 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowRight, CheckCircle2, ImageIcon, AlertTriangle, Wand2, ChevronDown, Sliders } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Wand2, ChevronRight, Book, Feather, Palette, Type as TypeIcon } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
 import { Book as BookType, GenerationParams, Chapter } from '../types';
 
@@ -9,58 +8,18 @@ interface BookWizardProps {
   onBookCreated: (book: BookType) => void;
 }
 
-// Updated lists for clarity and broader appeal
-const GENRES = [
-  "Comedy", 
-  "Fantasy", 
-  "Sci-Fi", 
-  "Romance", 
-  "Mystery", 
-  "Thriller", 
-  "Horror", 
-  "Adventure", 
-  "Historical Fiction", 
-  "Drama", 
-  "Non-Fiction",
-  "Self-Help"
-];
-
-const TONES = [
-  "Funny & Witty", 
-  "Lighthearted & Fun",
-  "Emotional & Heartfelt",
-  "Dark & Gritty", 
-  "Suspenseful & Tense", 
-  "Inspiring & Uplifting", 
-  "Serious & Dramatic", 
-  "Whimsical & Magical",
-  "Romantic & Passionate"
-];
-
-const STYLES = [
-  "Simple & Direct",
-  "Witty & Humorous",
-  "Cinematic & Visual", 
-  "Descriptive & Flowery", 
-  "Fast-paced & Action",
-  "Journalistic & Factual"
-];
-
-const PERSPECTIVES = [
-  "Third Person Limited", "Third Person Omniscient", "First Person (I)", "Second Person (You)"
-];
-
-const PACING = [
-  "Steady & Balanced", "Fast-paced", "Slow Burn"
-];
+const GENRES = ["Comedy", "Fantasy", "Sci-Fi", "Romance", "Mystery", "Thriller", "Horror", "Historical Fiction", "Drama", "Self-Help"];
+const TONES = ["Funny & Witty", "Lighthearted & Fun", "Emotional & Heartfelt", "Dark & Gritty", "Suspenseful & Tense", "Inspiring & Uplifting", "Whimsical & Magical"];
+const STYLES = ["Simple & Direct", "Witty & Humorous", "Cinematic & Visual", "Descriptive & Flowery", "Fast-paced & Action"];
+const PACING = ["Steady & Balanced", "Fast-paced", "Slow Burn"];
 
 export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
+  const [step, setStep] = useState(1);
   const [status, setStatus] = useState<'idle' | 'generating' | 'complete' | 'error'>('idle');
-  const [errorDetails, setErrorDetails] = useState('');
   const [progressStep, setProgressStep] = useState<string>('');
   const [progressPercent, setProgressPercent] = useState(0);
-  const [generatedBook, setGeneratedBook] = useState<BookType | null>(null);
   const [liveCover, setLiveCover] = useState<string | null>(null);
+  const [generatedBook, setGeneratedBook] = useState<BookType | null>(null);
   
   const [formData, setFormData] = useState<GenerationParams>({
     title: '',
@@ -73,74 +32,38 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
     prompt: '',
   });
 
-  const handleChange = (field: keyof GenerationParams, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  const nextStep = () => setStep(s => Math.min(s + 1, 4));
+  const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
-  const handleSubmit = async () => {
+  const handleGenerate = async () => {
     setStatus('generating');
-    setErrorDetails('');
     setProgressStep('Conjuring visual essence...');
     setProgressPercent(5);
 
     try {
-      const coverPromise = geminiService.generateBookCover(
-        formData.title,
-        formData.genre,
-        formData.tone
-      ).then(url => {
-        if(url) setLiveCover(url);
-        return url;
-      });
+      const coverPromise = geminiService.generateBookCover(formData.title, formData.genre, formData.tone)
+        .then(url => { if(url) setLiveCover(url); return url; });
 
-      setProgressStep('Architecting narrative structure...');
-      setProgressPercent(15);
-      
       const partialBook = await geminiService.generateBookStructure(
-        formData.title,
-        formData.genre,
-        formData.tone,
-        formData.audience,
-        formData.pacing,
-        formData.prompt
+        formData.title, formData.genre, formData.tone, formData.audience, formData.pacing, formData.prompt
       );
 
-      if (!partialBook.chapters) {
-        throw new Error("Failed to generate chapters");
-      }
-
       const fullyWrittenChapters: Chapter[] = [];
-      const totalChapters = partialBook.chapters.length;
+      const totalChapters = partialBook.chapters?.length || 0;
 
       for (let i = 0; i < totalChapters; i++) {
-        const chapter = partialBook.chapters[i];
-        
-        const percent = 20 + Math.floor(((i) / totalChapters) * 70);
-        setProgressPercent(percent);
-        setProgressStep(`Weaving Chapter ${i + 1}: ${chapter.title}`);
-        
-        const prevSummary = i > 0 ? partialBook.chapters[i - 1].summary : undefined;
+        const ch = partialBook.chapters![i];
+        setProgressPercent(20 + Math.floor((i / totalChapters) * 70));
+        setProgressStep(`Weaving Chapter ${i + 1}: ${ch.title}`);
         
         const content = await geminiService.generateChapterContent(
-          partialBook.title || formData.title,
-          chapter,
-          formData.writingStyle,
-          formData.perspective,
-          prevSummary
+          formData.title, ch, formData.writingStyle, formData.perspective
         );
 
-        fullyWrittenChapters.push({
-          ...chapter,
-          content: content,
-          isGenerated: true
-        });
+        fullyWrittenChapters.push({ ...ch, content, isGenerated: true });
       }
 
-      setProgressStep('Binding pages & finalizing ink...');
-      setProgressPercent(95);
-      
       const coverImage = await coverPromise;
-
       const newBook: BookType = {
         id: crypto.randomUUID(),
         title: partialBook.title || formData.title,
@@ -151,307 +74,223 @@ export const BookWizard: React.FC<BookWizardProps> = ({ onBookCreated }) => {
         chapters: fullyWrittenChapters,
         characters: partialBook.characters || [],
         createdAt: new Date(),
-        coverImage: coverImage || liveCover || `https://picsum.photos/seed/${Date.now()}/600/900`,
+        coverImage: coverImage || `https://picsum.photos/seed/${Date.now()}/600/900`,
         style: formData.writingStyle,
         perspective: formData.perspective,
         pacing: formData.pacing
       };
 
       setGeneratedBook(newBook);
-      setProgressPercent(100);
       setStatus('complete');
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       setStatus('error');
-      
-      const msg = e.message || e.toString();
-      if (msg.includes("API Key is not configured") || msg.includes("AUTH_ERROR")) {
-        setErrorDetails("The application's API Key is missing or invalid.");
-      } else if (msg.includes("QUOTA") || msg.includes("429")) {
-        setErrorDetails("The application's API quota has been exceeded.");
-      } else {
-        setErrorDetails(`An unexpected error occurred: ${msg}`);
-      }
     }
   };
 
-  // Error State
-  if (status === 'error') {
-     return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
-           <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center text-red-500 mb-6 border border-red-100 dark:border-red-900/50">
-              <AlertTriangle size={36} />
-           </div>
-           <h2 className="text-3xl font-serif font-bold text-stone-900 dark:text-white mb-3">The Spell Failed</h2>
-           <p className="text-stone-500 dark:text-stone-400 mb-8 max-w-md leading-relaxed break-words">{errorDetails}</p>
-           
-           <button onClick={() => setStatus('idle')} className="px-8 py-3 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-full font-bold hover:bg-stone-800 transition-colors shadow-lg">
-              Try Again
-           </button>
-        </div>
-     );
-  }
+  const stepVariants = {
+    initial: { opacity: 0, x: 20 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -20 }
+  };
 
-  // Generating State
   if (status === 'generating') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 relative">
-         {/* Background Pulse */}
-         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-             <div className="w-[500px] h-[500px] bg-saffron-500/10 rounded-full blur-[120px] animate-pulse" />
-         </div>
-
-         <div className="relative z-10 w-full max-w-4xl grid md:grid-cols-2 gap-12 items-center">
-             {/* Cover Preview */}
-             <div className="flex justify-center md:justify-end">
-                <div className="relative w-64 aspect-[3/4] rounded-lg shadow-2xl shadow-saffron-500/10 overflow-hidden bg-stone-900 border border-stone-800">
-                    <AnimatePresence mode="wait">
-                       {liveCover ? (
-                         <motion.img 
-                           key="cover"
-                           initial={{ opacity: 0, scale: 1.1 }}
-                           animate={{ opacity: 1, scale: 1 }}
-                           src={liveCover} 
-                           alt="Generated Cover"
-                           className="w-full h-full object-cover"
-                         />
-                       ) : (
-                         <motion.div 
-                            key="placeholder"
-                            animate={{ opacity: [0.5, 1, 0.5] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="w-full h-full flex flex-col items-center justify-center text-stone-600 gap-4 p-6"
-                         >
-                            <Sparkles size={32} className="text-saffron-500" />
-                            <span className="text-xs font-serif text-center uppercase tracking-widest">Designing<br/>Cover Art</span>
-                         </motion.div>
-                       )}
-                     </AnimatePresence>
-                     {/* Gloss Effect */}
-                     <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
+      <div className="flex flex-col items-center justify-center min-h-[70vh] px-6">
+        <div className="w-full max-w-lg space-y-12">
+           <div className="relative aspect-[3/4] w-64 mx-auto rounded-3xl overflow-hidden shadow-2xl bg-stone-900 border border-stone-800">
+              {liveCover ? (
+                <motion.img initial={{ opacity: 0 }} animate={{ opacity: 1 }} src={liveCover} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+                  <Wand2 className="text-saffron-500 animate-spin" size={40} />
+                  <span className="text-[10px] uppercase tracking-widest text-stone-500">Painting cover...</span>
                 </div>
-             </div>
-
-             {/* Status Text */}
-             <div className="text-center md:text-left">
-                <h2 className="font-serif text-4xl md:text-5xl font-bold text-stone-900 dark:text-white mb-6 tracking-tight">
-                    Forging Story
-                </h2>
-                
-                <div className="space-y-6">
-                    <div>
-                        <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-stone-400 mb-2">
-                            <span>Progress</span>
-                            <span>{progressPercent}%</span>
-                        </div>
-                        <div className="h-1 w-full bg-stone-200 dark:bg-stone-800 rounded-full overflow-hidden">
-                            <motion.div 
-                                className="h-full bg-saffron-500"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${progressPercent}%` }}
-                                transition={{ ease: "circOut" }}
-                            />
-                        </div>
-                    </div>
-
-                    <motion.div
-                        key={progressStep}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-3 text-stone-600 dark:text-stone-300 font-medium"
-                    >
-                        <Wand2 size={18} className="text-saffron-500 animate-pulse" />
-                        {progressStep}
-                    </motion.div>
-                </div>
-             </div>
-         </div>
+              )}
+           </div>
+           <div className="text-center space-y-4">
+              <h2 className="font-serif text-3xl font-bold dark:text-white">{progressStep}</h2>
+              <div className="h-1.5 w-full bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+                <motion.div animate={{ width: `${progressPercent}%` }} className="h-full bg-saffron-500" />
+              </div>
+              <p className="text-xs font-mono text-stone-400 uppercase tracking-widest">{progressPercent}% Narrative Sync</p>
+           </div>
+        </div>
       </div>
     );
   }
 
-  // Complete State
   if (status === 'complete' && generatedBook) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, type: "spring" }}
-          className="relative w-full max-w-5xl bg-white/60 dark:bg-stone-900/60 backdrop-blur-2xl rounded-[3rem] p-8 md:p-16 shadow-2xl border border-white/50 dark:border-stone-800 flex flex-col md:flex-row gap-12 items-center"
-        >
-          {/* Book Display */}
-          <div className="w-64 md:w-80 shrink-0 perspective-1000">
-             <motion.div 
-               initial={{ rotateY: -20, opacity: 0 }}
-               animate={{ rotateY: 0, opacity: 1 }}
-               transition={{ delay: 0.2, duration: 0.8 }}
-               className="aspect-[3/4] rounded-xl shadow-2xl shadow-black/20 overflow-hidden relative"
-             >
-                <img src={generatedBook.coverImage} className="w-full h-full object-cover" />
-                {/* Shine */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-black/20 via-transparent to-white/20 pointer-events-none" />
-             </motion.div>
-          </div>
-
-          <div className="flex-1 text-center md:text-left space-y-8">
-             <div>
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                    <CheckCircle2 size={14} /> Complete
-                </motion.div>
-                <motion.h2 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="font-serif text-5xl md:text-6xl font-bold text-stone-900 dark:text-white leading-[1.1] mb-2">
-                    {generatedBook.title}
-                </motion.h2>
-                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="text-xl text-stone-500 dark:text-stone-400 font-serif italic">
-                    A {generatedBook.genre} by {generatedBook.author}
-                </motion.p>
-             </div>
-
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="flex flex-col md:flex-row gap-4 justify-center md:justify-start">
-                 <button onClick={() => onBookCreated(generatedBook)} className="px-10 py-4 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-full font-bold text-lg hover:bg-saffron-500 dark:hover:bg-saffron-400 hover:text-white transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-2">
-                    Start Reading <ArrowRight size={20} />
-                 </button>
-             </motion.div>
-          </div>
-        </motion.div>
-      </div>
+        <div className="flex flex-col items-center justify-center min-h-[70vh] px-6">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white/70 dark:bg-stone-900/70 backdrop-blur-2xl p-12 rounded-[3rem] border border-white/50 dark:border-stone-800 shadow-2xl text-center max-w-2xl">
+                <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center text-green-500 mx-auto mb-6">
+                    <CheckCircle2 size={40} />
+                </div>
+                <h2 className="font-serif text-4xl font-bold mb-2 dark:text-white">{generatedBook.title}</h2>
+                <p className="text-stone-500 italic mb-8">A {generatedBook.genre} Masterpiece is Born.</p>
+                <button onClick={() => onBookCreated(generatedBook)} className="px-12 py-4 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-full font-bold text-xl shadow-xl hover:bg-saffron-500 dark:hover:bg-saffron-400 hover:text-white transition-all flex items-center justify-center gap-3 mx-auto">
+                    Open Studio <ArrowRight size={20} />
+                </button>
+            </motion.div>
+        </div>
     );
   }
 
-  // Form View
   return (
     <div className="max-w-4xl mx-auto py-12 px-6">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-12"
-      >
-        <h1 className="font-serif text-5xl md:text-6xl font-bold text-stone-900 dark:text-white mb-6">Create a New Story</h1>
-        <p className="text-lg text-stone-500 dark:text-stone-400 max-w-xl mx-auto">
-           Describe your vision, and our AI Master Author will weave the plot, characters, and cover art into existence.
-        </p>
-      </motion.div>
+      {/* Progress Dots */}
+      <div className="flex justify-center gap-3 mb-12">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${step === i ? 'w-8 bg-saffron-500' : 'w-2 bg-stone-200 dark:bg-stone-800'}`} />
+        ))}
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-white/40 dark:bg-stone-900/40 backdrop-blur-xl border border-white/60 dark:border-stone-800 rounded-[2.5rem] p-8 md:p-12 shadow-xl"
-      >
-          <div className="space-y-8">
-            {/* Title Input */}
-            <div className="group">
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 ml-2 group-focus-within:text-saffron-500 transition-colors">Book Title</label>
-                <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => handleChange('title', e.target.value)}
-                    placeholder="e.g. The Comedy of Errors"
-                    className="w-full bg-transparent border-b-2 border-stone-200 dark:border-stone-800 focus:border-saffron-500 px-2 py-4 text-3xl md:text-4xl font-serif font-bold text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-700 outline-none transition-colors"
-                />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          variants={stepVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={{ duration: 0.4, ease: "circOut" }}
+          className="bg-white/40 dark:bg-stone-900/40 backdrop-blur-2xl p-10 md:p-16 rounded-[3rem] border border-white/50 dark:border-stone-800 shadow-xl"
+        >
+          {step === 1 && (
+            <div className="space-y-8">
+              <div className="flex items-center gap-4 text-saffron-500">
+                <Book size={24} />
+                <span className="text-xs font-mono uppercase tracking-[0.3em]">Phase 01: Conception</span>
+              </div>
+              <h1 className="font-serif text-5xl font-bold dark:text-white">What shall we name your story?</h1>
+              <input 
+                autoFocus
+                type="text"
+                placeholder="The Chronicles of..."
+                value={formData.title}
+                onChange={e => setFormData({...formData, title: e.target.value})}
+                className="w-full bg-transparent border-b-2 border-stone-200 dark:border-stone-700 py-6 text-4xl font-serif font-bold focus:border-saffron-500 outline-none transition-colors dark:text-white placeholder:text-stone-300"
+              />
+              <textarea 
+                placeholder="A brief seed of an idea... (Optional)"
+                value={formData.prompt}
+                onChange={e => setFormData({...formData, prompt: e.target.value})}
+                className="w-full bg-stone-50 dark:bg-stone-800/50 p-6 rounded-2xl h-32 outline-none focus:ring-2 focus:ring-saffron-500/20 text-lg dark:text-white"
+              />
             </div>
+          )}
 
-            {/* Core Settings */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="relative group">
-                    <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-2">Genre</label>
-                    <div className="relative">
-                        <select
-                            value={formData.genre}
-                            onChange={(e) => handleChange('genre', e.target.value)}
-                            className="w-full appearance-none bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-2xl px-6 py-4 text-lg font-medium text-stone-900 dark:text-white outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-stone-800"
-                        >
-                             {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={20} />
+          {step === 2 && (
+            <div className="space-y-10">
+              <div className="flex items-center gap-4 text-saffron-500">
+                <Palette size={24} />
+                <span className="text-xs font-mono uppercase tracking-[0.3em]">Phase 02: Atmosphere</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div className="space-y-4">
+                  <label className="text-sm font-bold uppercase tracking-widest text-stone-400">Genre</label>
+                  <div className="flex flex-wrap gap-2">
+                    {GENRES.map(g => (
+                      <button key={g} onClick={() => setFormData({...formData, genre: g})} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${formData.genre === g ? 'bg-saffron-500 text-white shadow-lg' : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200'}`}>
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <label className="text-sm font-bold uppercase tracking-widest text-stone-400">Tone</label>
+                  <div className="flex flex-wrap gap-2">
+                    {TONES.map(t => (
+                      <button key={t} onClick={() => setFormData({...formData, tone: t})} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${formData.tone === t ? 'bg-purple-500 text-white shadow-lg' : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200'}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-10">
+              <div className="flex items-center gap-4 text-saffron-500">
+                <TypeIcon size={24} />
+                <span className="text-xs font-mono uppercase tracking-[0.3em]">Phase 03: Architecture</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-stone-400">Writing Style</label>
+                    <select value={formData.writingStyle} onChange={e => setFormData({...formData, writingStyle: e.target.value})} className="w-full p-4 bg-stone-100 dark:bg-stone-800 rounded-xl outline-none dark:text-white">
+                      {STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-stone-400">Perspective</label>
+                    <select value={formData.perspective} onChange={e => setFormData({...formData, perspective: e.target.value})} className="w-full p-4 bg-stone-100 dark:bg-stone-800 rounded-xl outline-none dark:text-white">
+                      <option value="First Person (I)">First Person (I)</option>
+                      <option value="Third Person Limited">Third Person Limited</option>
+                      <option value="Third Person Omniscient">Third Person Omniscient</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-stone-400">Pacing</label>
+                    <div className="space-y-3">
+                        {PACING.map(p => (
+                            <button key={p} onClick={() => setFormData({...formData, pacing: p})} className={`w-full text-left p-4 rounded-xl border-2 transition-all ${formData.pacing === p ? 'border-saffron-500 bg-saffron-500/10 text-saffron-600' : 'border-transparent bg-stone-100 dark:bg-stone-800 text-stone-500'}`}>
+                                {p}
+                            </button>
+                        ))}
                     </div>
                 </div>
-                <div className="relative group">
-                    <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-2">Tone</label>
-                    <div className="relative">
-                         <select
-                            value={formData.tone}
-                            onChange={(e) => handleChange('tone', e.target.value)}
-                            className="w-full appearance-none bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-2xl px-6 py-4 text-lg font-medium text-stone-900 dark:text-white outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-stone-800"
-                        >
-                            {TONES.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                         <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={20} />
-                    </div>
-                </div>
+              </div>
             </div>
+          )}
 
-            {/* Advanced Tuning */}
-            <div className="bg-white/50 dark:bg-stone-950/30 rounded-3xl p-6 border border-stone-100 dark:border-stone-800">
-                <div className="flex items-center gap-2 mb-4 text-stone-400">
-                    <Sliders size={14} />
-                    <span className="text-xs font-bold uppercase tracking-widest">Narrative Tuning</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="relative group">
-                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Writing Style</label>
-                        <div className="relative">
-                            <select
-                                value={formData.writingStyle}
-                                onChange={(e) => handleChange('writingStyle', e.target.value)}
-                                className="w-full appearance-none bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-3 text-sm font-medium text-stone-900 dark:text-white outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all cursor-pointer"
-                            >
-                                {STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={16} />
-                        </div>
-                    </div>
-                    <div className="relative group">
-                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Perspective</label>
-                        <div className="relative">
-                            <select
-                                value={formData.perspective}
-                                onChange={(e) => handleChange('perspective', e.target.value)}
-                                className="w-full appearance-none bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-3 text-sm font-medium text-stone-900 dark:text-white outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all cursor-pointer"
-                            >
-                                {PERSPECTIVES.map(p => <option key={p} value={p}>{p}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={16} />
-                        </div>
-                    </div>
-                    <div className="relative group">
-                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Pacing</label>
-                        <div className="relative">
-                            <select
-                                value={formData.pacing}
-                                onChange={(e) => handleChange('pacing', e.target.value)}
-                                className="w-full appearance-none bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-3 text-sm font-medium text-stone-900 dark:text-white outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all cursor-pointer"
-                            >
-                                {PACING.map(p => <option key={p} value={p}>{p}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={16} />
-                        </div>
-                    </div>
-                </div>
+          {step === 4 && (
+            <div className="text-center space-y-8">
+              <div className="w-20 h-20 bg-saffron-500/10 rounded-full flex items-center justify-center text-saffron-500 mx-auto animate-bounce">
+                <Feather size={32} />
+              </div>
+              <h1 className="font-serif text-5xl font-bold dark:text-white">Ready to materialize?</h1>
+              <p className="text-stone-500 dark:text-stone-400 text-lg max-w-sm mx-auto">
+                We're about to weave "{formData.title}" into existence. This ritual takes a moment of focus.
+              </p>
+              <div className="grid grid-cols-2 gap-4 text-xs font-mono uppercase tracking-widest text-stone-400 pt-8 border-t border-stone-100 dark:border-stone-800">
+                <div>{formData.genre} // {formData.tone}</div>
+                <div>{formData.writingStyle} // {formData.pacing}</div>
+              </div>
             </div>
+          )}
 
-            {/* Prompt Area */}
-            <div>
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 ml-2">Story Premise (Optional)</label>
-                <textarea
-                    value={formData.prompt}
-                    onChange={(e) => handleChange('prompt', e.target.value)}
-                    placeholder="Describe the main conflict, characters, or specific scenes..."
-                    rows={4}
-                    className="w-full bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-2xl px-6 py-4 text-lg text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-600 outline-none focus:ring-2 focus:ring-saffron-500/50 transition-all resize-none"
-                />
-            </div>
-
-            <button
-                onClick={handleSubmit}
-                disabled={!formData.title}
-                className="w-full py-5 bg-stone-900 dark:bg-white hover:bg-saffron-500 dark:hover:bg-saffron-400 text-white dark:text-stone-900 font-bold text-xl rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-saffron-500/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transform active:scale-[0.98]"
-            >
-                <Sparkles size={24} className={formData.title ? "animate-pulse text-saffron-400 dark:text-saffron-600" : "text-stone-500"} />
-                <span>Generate Masterpiece</span>
-            </button>
+          {/* Navigation */}
+          <div className="mt-16 flex justify-between items-center">
+            {step > 1 ? (
+              <button onClick={prevStep} className="flex items-center gap-2 text-stone-400 hover:text-stone-900 dark:hover:text-white font-bold transition-colors">
+                <ArrowLeft size={18} /> Previous
+              </button>
+            ) : <div />}
+            
+            {step < 4 ? (
+              <button 
+                onClick={nextStep} 
+                disabled={step === 1 && !formData.title}
+                className="px-10 py-4 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-full font-bold flex items-center gap-3 shadow-xl hover:bg-saffron-500 hover:text-white transition-all disabled:opacity-30"
+              >
+                Continue <ChevronRight size={18} />
+              </button>
+            ) : (
+              <button 
+                onClick={handleGenerate} 
+                className="px-12 py-5 bg-saffron-500 text-white rounded-full font-bold text-xl shadow-2xl hover:scale-105 transition-transform flex items-center gap-3"
+              >
+                <Sparkles size={24} /> Materialize Story
+              </button>
+            )}
           </div>
-      </motion.div>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };

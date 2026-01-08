@@ -10,8 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
     <script>
-      // Shim for process.env to prevent "process is not defined" crashes in browser environments
-      // Safely initialize without overwriting if process.env already exists (e.g. injected by bundler)
       window.process = window.process || {};
       window.process.env = window.process.env || {};
       if (!window.process.env.NODE_ENV) {
@@ -49,16 +47,15 @@
       }
     </script>
     <style>
-      /* Transparent body to allow NebulaBackground to show */
       body {
-        background-color: transparent;
+        background-color: #FDFCF8;
         color: #1C1917;
+        overflow-x: hidden;
       }
       .dark body {
-        background-color: transparent;
+        background-color: #0c0a09;
         color: #f5f5f4;
       }
-      /* Custom Scrollbar */
       ::-webkit-scrollbar {
         width: 6px;
       }
@@ -72,11 +69,8 @@
       .dark ::-webkit-scrollbar-thumb {
         background: #44403c;
       }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #D6D3D1;
-      }
-      .dark ::-webkit-scrollbar-thumb:hover {
-        background: #57534e;
+      .perspective-1000 {
+        perspective: 1000px;
       }
     </style>
   <script type="importmap">
@@ -93,7 +87,11 @@
     "jspdf": "https://esm.sh/jspdf@2.5.1",
     "three": "https://esm.sh/three@0.164.1",
     "marked": "https://esm.sh/marked@12.0.2",
-    "dompurify": "https://esm.sh/dompurify@3.1.2"
+    "dompurify": "https://esm.sh/dompurify@3.1.2",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/"
   }
 }
 </script>
